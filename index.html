@@ -10,6 +10,7 @@
 <script src="vendor/qrcode.js"></script>
 <script src="vendor/pdf.min.js"></script>
 <script src="vendor/pdf.worker.min.js"></script>
+<script src="logo-composer.js"></script>
 <link rel="stylesheet" href="interface.css">
 </head>
 <body>
@@ -141,10 +142,15 @@
         <h2 id="h-logo"><span class="step">5</span>Логотип</h2>
         <div class="logo-stage" id="logo-stage"><span class="empty">Логотип не загружен</span></div>
         <div class="tool-row">
-          <span class="file-btn btn small">Загрузить SVG<input type="file" id="logo-file" accept=".svg,image/svg+xml" aria-label="Загрузить логотип SVG"></span>
+          <span class="file-btn btn small">Загрузить SVG<input type="file" id="logo-file" accept=".svg,image/svg+xml" multiple aria-label="Загрузить логотип из одного или нескольких SVG"></span>
+          <span class="file-btn btn small" id="logo-add-wrap" hidden>+ Добавить часть SVG<input type="file" id="logo-add-file" accept=".svg,image/svg+xml" multiple aria-label="Добавить часть логотипа SVG"></span>
           <button type="button" class="btn small" id="logo-auto" hidden>Название синим, подпись чёрным</button>
           <button type="button" class="btn small" id="logo-reset" hidden>Исходные цвета</button>
           <button type="button" class="btn small" id="logo-remove" hidden>Убрать логотип</button>
+        </div>
+        <div id="logo-composition" hidden>
+          <div class="row"><label class="f">Расположение<select id="logo-layout"><option value="horizontal">Рядом</option><option value="vertical">Друг под другом</option></select></label><label class="f">Промежуток<input id="logo-gap" type="range" min="0" max="60" step="1" value="12"><output id="logo-gap-value">12 %</output></label></div>
+          <div id="logo-parts" class="logo-parts"></div>
         </div>
         <div class="logo-tools" id="logo-tools" hidden>
           <div class="tool-row"><span class="lbl">Цвета в логотипе</span><span id="logo-colors" class="tool-row"></span></div>
@@ -156,7 +162,7 @@
           </div>
           <div class="sel-info" id="sel-info">Нажмите на часть логотипа (например, на название) — выделится вся строка. Потом выберите цвет.</div>
         </div>
-        <p class="hint">Только SVG. После загрузки главное название автоматически становится синим, как заголовки в выписке, а текст под ним — чёрным. Если логотип нарисован кривыми, нажмите на нужную строку и выберите цвет вручную. В PDF логотип стоит в левом верхнем углу высотой 14 мм.</p>
+        <p class="hint">Можно загрузить до четырёх SVG сразу или добавить отдельную часть. Исходные цвета сохраняются. Для составного логотипа настройте расположение, размер частей и промежуток. Кнопкой «Выделить» можно перекрасить отдельную часть. В PDF логотип размещается единым блоком в левом верхнем углу.</p>
         <div class="msg err" id="logo-msg" hidden></div>
       </section>
 
@@ -965,17 +971,24 @@ const BRAND_BLUE = "#1F4FD1", LOGO_BLACK = "#0B0D12";
 const SHAPES = "path,rect,circle,ellipse,polygon,polyline,text,use";
 let logoUnits = [];          // recolourable elements in document order
 let logoSel = [];            // selected indices
+function unsafeSvgStyle(text) {
+  if(/@import|expression\s*\(/i.test(text))return true;
+  return [...String(text).matchAll(/url\s*\(\s*(['"]?)(.*?)\1\s*\)/gi)].some(match=>!/^#[\w:.-]+$/.test(match[2].trim()));
+}
 function sanitizeSvg(text) {
   const d = new DOMParser().parseFromString(text, "image/svg+xml");
   const svg = d.documentElement;
   if (!svg || svg.nodeName.toLowerCase() !== "svg" || d.getElementsByTagName("parsererror").length) throw new Error("parse");
   svg.querySelectorAll("script,foreignObject,iframe,object,embed,image,animate,animateMotion,animateTransform,set,feImage").forEach((n) => n.remove());
-  svg.querySelectorAll("*").forEach((n) => {
+  [svg, ...svg.querySelectorAll("*")].forEach((n) => {
     [...n.attributes].forEach((a) => {
-      if (/^on/i.test(a.name) || /^(href|xlink:href)$/i.test(a.name) && !/^\s*#[\w.-]+\s*$/.test(a.value) || /url\s*\(\s*['"]?\s*(?!#)/i.test(a.value) || /@import|expression\s*\(/i.test(a.value)) n.removeAttribute(a.name);
+      if (/^on/i.test(a.name) || /^(href|xlink:href)$/i.test(a.name) && !/^\s*#[\w.-]+\s*$/.test(a.value) || unsafeSvgStyle(a.value)) n.removeAttribute(a.name);
     });
   });
   [...svg.attributes].forEach((a) => { if (/^on/i.test(a.name) || /^(href|xlink:href)$/i.test(a.name)) svg.removeAttribute(a.name); });
+  svg.querySelectorAll('style').forEach(style=>{
+    if(unsafeSvgStyle(style.textContent))style.remove();
+  });
   return svg;
 }
 function toHex(c) {
@@ -1004,8 +1017,15 @@ function mountLogo() {
   stage.appendChild(svg);
   logoUnits = [...svg.querySelectorAll(SHAPES)].filter((n) =>
     !n.closest("defs,clipPath,mask,pattern,symbol,marker") && unitFill(n));
-  const fills = S.logoFills || {};
-  logoUnits.forEach((n, i) => { n.dataset.orig = unitFill(n); if (fills[i]) paint(n, fills[i]); });
+  const fills = S.logoFills || {},counts=new Map();
+  logoUnits.forEach((n,i)=>{
+    const partId=n.closest('[data-logo-part]')?.getAttribute('data-logo-part')||(S.logoParts.length===1?S.logoParts[0].id:'');
+    const local=counts.get(partId)||0;counts.set(partId,local+1);n.dataset.logoPart=partId;n.dataset.logoUnit=local;
+    n.dataset.orig=unitFill(n);
+    const part=S.logoParts.find(part=>part.id===partId),color=part?.fills?.[local]||(!part?fills[i]:null);
+    if(color){fills[i]=color;paint(n,color);}
+  });
+  S.logoFills=fills;
   logoUnits.forEach((n, i) => n.addEventListener("click", (ev) => { ev.stopPropagation(); selectRow(i, ev.shiftKey); }));
   renderLogoColors();
   return svg;
@@ -1017,7 +1037,7 @@ function selectRow(i, single) {
     const r = rectOf(logoUnits[i]), col = unitFill(logoUnits[i]);
     logoSel = logoUnits.map((n, k) => {
       const q = rectOf(n), cy = q.top + q.height / 2;
-      return (cy >= r.top - 1 && cy <= r.bottom + 1 && unitFill(n) === col && q.height <= r.height * 1.6 + 2) ? k : -1;
+      return (n.dataset.logoPart===logoUnits[i].dataset.logoPart && cy >= r.top - 1 && cy <= r.bottom + 1 && unitFill(n) === col && q.height <= r.height * 1.6 + 2) ? k : -1;
     }).filter((k) => k >= 0);
     if (!logoSel.includes(i)) logoSel.push(i);
   }
@@ -1054,7 +1074,7 @@ function applyColor(hex) {
   if (!logoSel.length) { $("sel-info").textContent = "Сначала нажмите на часть логотипа, которую нужно перекрасить."; return; }
   S.logoFills = S.logoFills || {};
   logoSel.forEach((k) => { paint(logoUnits[k], hex); S.logoFills[k] = hex; });
-  persist(); renderLogoColors(); drawSelection(); refreshLogoPng();
+  syncLogoPartFills(); persist(); renderLogoColors(); drawSelection(); refreshLogoPng();
 }
 function autoColors() {
   if (!logoUnits.length) return false;
@@ -1095,7 +1115,7 @@ function autoColors() {
   }
   S.logoFills = fills;
   logoUnits.forEach((n, k) => { n.style.fill = ""; n.querySelectorAll && n.querySelectorAll("tspan,textPath").forEach((t) => { t.style.fill = ""; }); if (fills[k]) paint(n, fills[k]); });
-  logoSel = []; drawSelection(); renderLogoColors(); persist();
+  logoSel = []; syncLogoPartFills(); drawSelection(); renderLogoColors(); persist();
   return true;
 }
 function currentLogoSvgText() {
@@ -1103,44 +1123,118 @@ function currentLogoSvgText() {
   return svg ? new XMLSerializer().serializeToString(svg) : "";
 }
 async function refreshLogoPng() {
-  const txt = currentLogoSvgText();
-  if (!txt) { logoPng = null; onChange(); return; }
-  try { logoPng = await rasterizeSvg(txt); }
-  catch (e) { logoPng = null; }
+  const seq=++logoRenderSeq,txt=currentLogoSvgText();
+  if(!txt){logoPng=null;onChange();return;}
+  try{const png=await rasterizeSvg(txt);if(seq!==logoRenderSeq)return;logoPng=png;}
+  catch(e){if(seq!==logoRenderSeq)return;logoPng=null;}
   onChange();
 }
-$("logo-file").addEventListener("change", async (e) => {
-  const file = e.target.files && e.target.files[0];
-  e.target.value = "";
-  if (!file) return;
-  const msg = $("logo-msg"); msg.hidden = true;
-  if (!/\.svg$/i.test(file.name) && file.type !== "image/svg+xml") { msg.textContent = "Нужен файл в формате SVG."; msg.hidden = false; return; }
-  const text = await file.text();
-  const prev = { svg: S.logoSvg, fills: S.logoFills };
-  try {
-    S.logoSvg = text; S.logoFills = {};
-    mountLogo();
-    await rasterizeSvg(currentLogoSvgText());
-    const ok = autoColors();
-    if (!ok) { msg.textContent = "Не нашёл в логотипе строк текста. Нажмите на нужную часть логотипа и выберите цвет вручную."; msg.classList.remove("err"); msg.hidden = false; }
-    persist(); await refreshLogoPng();
-  } catch (err) {
-    S.logoSvg = prev.svg; S.logoFills = prev.fills; persist(); mountLogo();
-    msg.classList.add("err");
-    msg.textContent = "Не получилось прочитать этот SVG. Сохраните логотип заново как обычный SVG (без внешних шрифтов и картинок) и попробуйте ещё раз.";
-    msg.hidden = false;
-  }
-});
 $("logo-auto").addEventListener("click", async () => {
   const msg = $("logo-msg");
   if (!autoColors()) { msg.classList.remove("err"); msg.textContent = "Не нашёл в логотипе строк текста. Нажмите на нужную часть логотипа и выберите цвет вручную."; msg.hidden = false; return; }
   msg.hidden = true; await refreshLogoPng();
 });
-$("logo-reset").addEventListener("click", () => { S.logoFills = {}; persist(); mountLogo(); refreshLogoPng(); });
-$("logo-remove").addEventListener("click", () => { S.logoSvg = ""; S.logoFills = {}; logoPng = null; persist(); mountLogo(); $("logo-msg").hidden = true; onChange(); });
+$("logo-reset").addEventListener("click", () => { S.logoFills = {};S.logoParts.forEach(part=>{part.fills={};}); persist(); mountLogo(); refreshLogoPng(); });
+$("logo-remove").addEventListener("click", clearLogo);
 document.querySelectorAll(".sw-named").forEach((b) => b.addEventListener("click", () => applyColor(b.dataset.color)));
 $("logo-picker").addEventListener("input", (e) => applyColor(e.target.value.toUpperCase()));
 $("logo-stage").addEventListener("click", () => { logoSel = []; drawSelection(); });
+
+let logoPartSequence=0,logoRenderSeq=0,logoLoadSeq=0;
+const logoPartId=()=>`part-${Date.now().toString(36)}-${++logoPartSequence}`;
+S.logoParts=Array.isArray(S.logoParts)?S.logoParts.filter(part=>part&&typeof part.svg==='string').slice(0,4).map(part=>({...part,fills:{...(part.fills||{})}})):[];
+if(!S.logoParts.length&&S.logoSvg)S.logoParts=[{id:logoPartId(),name:'Текущий логотип.svg',svg:S.logoSvg,scale:100,fills:{...(S.logoFills||{})}}];
+S.logoLayout=S.logoLayout==='vertical'?'vertical':'horizontal';S.logoGap=Number.isFinite(Number(S.logoGap))?Number(S.logoGap):12;
+function syncLogoPartFills(){
+  if(!S.logoParts.length)return;
+  S.logoParts.forEach(part=>{part.fills={};});
+  logoUnits.forEach((unit,index)=>{
+    const part=S.logoParts.find(part=>part.id===unit.dataset.logoPart);
+    if(part&&S.logoFills[index])part.fills[unit.dataset.logoUnit]=S.logoFills[index];
+  });
+}
+function composeLogoParts(parts=S.logoParts){
+  return window.EstrattoLogoComposer.compose(parts.map(part=>({...part,svg:sanitizeSvg(part.svg)})),S.logoLayout,S.logoGap);
+}
+function renderLogoParts(){
+  const multiple=S.logoParts.length>1;
+  $('logo-composition').hidden=!multiple;
+  $('logo-add-wrap').hidden=!S.logoParts.length||S.logoParts.length>=4;
+  $('logo-layout').value=S.logoLayout;$('logo-gap').value=S.logoGap;$('logo-gap-value').textContent=S.logoGap+' %';
+  const container=$('logo-parts');container.replaceChildren();
+  S.logoParts.forEach((part,index)=>{
+    const row=document.createElement('div');row.className='logo-part';
+    const header=document.createElement('div');header.className='logo-part-heading';
+    const name=document.createElement('strong');name.textContent=`${index+1}. ${part.name||'Часть логотипа'}`;header.append(name);
+    const actions=document.createElement('div');actions.className='tool-row';
+    for(const [action,text,label,disabled] of [
+      ['select','Выделить','Выделить все элементы этой части',false],
+      ['up','↑','Переместить часть раньше',index===0],['down','↓','Переместить часть позже',index===S.logoParts.length-1],
+      ['remove','Удалить','Удалить эту часть',false]
+    ]){
+      const button=document.createElement('button');button.type='button';button.className='btn small';button.textContent=text;
+      button.dataset.logoAction=action;button.dataset.logoId=part.id;button.disabled=disabled;button.setAttribute('aria-label',label);actions.append(button);
+    }
+    header.append(actions);row.append(header);
+    const label=document.createElement('label');label.className='f';label.append(document.createTextNode('Размер части'));
+    const slider=document.createElement('input');slider.type='range';slider.min='25';slider.max='200';slider.step='5';slider.value=part.scale||100;slider.dataset.logoScale=part.id;slider.setAttribute('aria-label','Размер части '+(index+1));
+    const output=document.createElement('output');output.textContent=(part.scale||100)+' %';label.append(slider,output);row.append(label);container.append(row);
+  });
+}
+function rebuildLogoComposition(){
+  try{
+    S.logoSvg=composeLogoParts();S.logoFills={};mountLogo();persist();return refreshLogoPng();
+  }catch(e){$('logo-msg').textContent='Не удалось объединить части SVG: '+e.message;$('logo-msg').hidden=false;}
+}
+function clearLogo(){
+  logoRenderSeq++;logoLoadSeq++;S.logoParts=[];S.logoSvg='';S.logoFills={};logoPng=null;persist();mountLogo();renderLogoParts();$('logo-msg').hidden=true;onChange();
+}
+async function loadLogoFiles(files,append){
+  const loadSeq=++logoLoadSeq;
+  const msg=$('logo-msg');msg.hidden=true;msg.classList.add('err');
+  try{
+    if(!files.length)return;
+    syncLogoPartFills();
+    if(files.length+(append?S.logoParts.length:0)>4)throw new Error('Можно объединить до четырёх SVG.');
+    const added=await Promise.all(files.map(async file=>{
+      if(!/\.svg$/i.test(file.name)&&file.type!=='image/svg+xml')throw new Error('Все части должны быть SVG-файлами.');
+      if(file.size>1000000)throw new Error('Один SVG должен быть не больше 1 МБ.');
+      const svg=sanitizeSvg(await file.text());
+      if(![...svg.querySelectorAll(SHAPES)].some(shape=>!shape.closest('defs,clipPath,mask,pattern,symbol,marker')))throw new Error('В SVG нет видимых векторных элементов.');
+      return {id:logoPartId(),name:file.name,svg:new XMLSerializer().serializeToString(svg),scale:100,fills:{}};
+    }));
+    if(loadSeq!==logoLoadSeq)return;
+    const parts=append?[...S.logoParts,...added]:added;
+    if(parts.reduce((sum,part)=>sum+part.svg.length,0)>750000)throw new Error('Суммарный размер SVG слишком большой. Оптимизируйте файлы и загрузите снова.');
+    const svg=composeLogoParts(parts);await rasterizeSvg(svg);
+    if(loadSeq!==logoLoadSeq)return;
+    S.logoParts=parts;S.logoSvg=composeLogoParts(parts);S.logoFills={};mountLogo();renderLogoParts();persist();await refreshLogoPng();
+  }catch(e){if(loadSeq!==logoLoadSeq)return;msg.textContent='Логотип не изменён. '+e.message;msg.hidden=false;}
+}
+$('logo-file').addEventListener('change',event=>{const files=[...event.target.files];event.target.value='';loadLogoFiles(files,false);});
+$('logo-add-file').addEventListener('change',event=>{const files=[...event.target.files];event.target.value='';loadLogoFiles(files,true);});
+$('logo-layout').addEventListener('change',event=>{syncLogoPartFills();S.logoLayout=event.target.value;rebuildLogoComposition();});
+$('logo-gap').addEventListener('input',event=>{syncLogoPartFills();S.logoGap=Number(event.target.value);$('logo-gap-value').textContent=S.logoGap+' %';rebuildLogoComposition();});
+$('logo-parts').addEventListener('input',event=>{
+  const id=event.target.dataset.logoScale;if(!id)return;syncLogoPartFills();
+  const part=S.logoParts.find(part=>part.id===id);part.scale=Number(event.target.value);event.target.nextElementSibling.textContent=part.scale+' %';rebuildLogoComposition();
+});
+$('logo-parts').addEventListener('click',event=>{
+  const button=event.target.closest('[data-logo-action]');if(!button)return;
+  const index=S.logoParts.findIndex(part=>part.id===button.dataset.logoId);if(index<0)return;
+  if(button.dataset.logoAction==='select'){
+    logoSel=logoUnits.map((unit,i)=>unit.dataset.logoPart===button.dataset.logoId?i:-1).filter(i=>i>=0);drawSelection();return;
+  }
+  syncLogoPartFills();
+  if(button.dataset.logoAction==='remove')S.logoParts.splice(index,1);
+  else{
+    const next=index+(button.dataset.logoAction==='up'?-1:1);
+    if(next<0||next>=S.logoParts.length)return;
+    [S.logoParts[index],S.logoParts[next]]=[S.logoParts[next],S.logoParts[index]];
+  }
+  if(!S.logoParts.length){clearLogo();return;}
+  rebuildLogoComposition();renderLogoParts();
+});
 
 /* parsed table + counts */
 let parsed = [];
@@ -1341,9 +1435,10 @@ window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() =
 window.EstrattoDocument = { buildPdf, collectProfile: collect, relayoutLogo: drawSelection };
 
 /* boot */
+renderLogoParts();
 (async () => {
   if (S.logoSvg) {
-    try { mountLogo(); logoPng = await rasterizeSvg(currentLogoSvgText()); }
+    try { mountLogo(); await refreshLogoPng(); }
     catch (e) { logoPng = null; }
   } else mountLogo();
   setMode(S.mode === "chiuse" ? "chiuse" : "aperte");

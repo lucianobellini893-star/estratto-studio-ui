@@ -263,7 +263,7 @@ table.parsed tr.err td { background: var(--bad-soft); color: var(--bad); white-s
 .qr-meta { display: flex; flex: 1; min-width: 160px; flex-direction: column; gap: 6px; color: var(--ink-2); font-size: 11px; line-height: 1.6; }
 .qr-meta a { color: var(--ink); overflow-wrap: anywhere; }
 .logo-stage { position: relative; display: grid; place-items: center; min-height: 100px; padding: 16px; border: 1px dashed var(--line-strong); border-radius: 14px; background: #fff; }
-.logo-stage svg { display: block; width: 100%; height: auto; max-height: 130px; }
+.logo-stage > svg { display: block; width: 100%; height: auto; max-height: 130px; }
 .logo-stage svg * { cursor: pointer; }
 .logo-stage .empty { color: var(--muted); font-size: 12px; }
 .sel-box { position: absolute; border: 1.5px dashed #d18b2c; border-radius: 2px; pointer-events: none; }
@@ -456,3 +456,11 @@ select:focus-visible { outline:2px solid #72756b; outline-offset:3px; }
 #ac-deposit-error { color:var(--bad); background:var(--bad-soft); }
 #ac-deposit-success { color:#4f7756; background:#edf5ed; }
 #ac-deposit-preview td:last-child { text-align:right; }
+/* Multipart logos share the existing SVG colour editor. */
+#logo-composition { display:flex; flex-direction:column; gap:16px; }
+.logo-parts { display:flex; flex-direction:column; gap:12px; }
+.logo-part { padding:14px; border:1px solid var(--line); border-radius:14px; background:var(--surface-2); }
+.logo-part-heading { display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
+.logo-part-heading strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:500; }
+#shared-logo-editor input[type=range] { width:100%; min-width:0; min-height:28px; margin:0; accent-color:#68685c; cursor:pointer; }
+#shared-logo-editor output { color:var(--muted); font-size:11px; }
