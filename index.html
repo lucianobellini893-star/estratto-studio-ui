@@ -676,7 +676,7 @@ async function buildPdf(data, renderContent) {
     const measuredWidth = block => Math.max(0, ...block.map(line => {
       f(line.font, line.size, line.color); return tw(line.text);
     }));
-    const gap = 8;
+    const gap = 11;
     const left = [
       ...lines(data.coName, "InterM", 11.5, 92, C.BLACK),
       ...data.coAddr.flatMap(line => lines(line, "InterR", 8.5, 92, C.GRAY))
