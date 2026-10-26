@@ -35,7 +35,17 @@
   function money(units, signed = false) {
     const negative = units < 0n, absolute = negative ? -units : units;
     const integer = String(absolute / 10000n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    return (negative ? '−' : signed && units > 0n ? '+' : '') + integer + ',' + String(absolute % 10000n).padStart(4, '0');
+    const fraction=String(absolute % 10000n).padStart(4,'0').replace(/0+$/,'').padEnd(2,'0');
+    return (negative ? '−' : signed && units > 0n ? '+' : '') + integer + ',' + fraction;
+  }
+  function cashRow(row,currency){
+    if(Object.prototype.hasOwnProperty.call(row,'amount'))return {...row};
+    const same=String(row.symbol||'').trim().toUpperCase()===String(currency||'').trim().toUpperCase();
+    let amount=row.quantity||'';
+    if(same){
+      try{const rate=decimal(row.price);if(rate.units<0n)throw new Error('rate');const value=productMoney(decimal(row.quantity),rate);const sign=value<0n?'-':'';const abs=value<0n?-value:value;amount=sign+String(abs/10000n)+'.'+String(abs%10000n).padStart(4,'0');}catch(_){amount='';}
+    }
+    return {...row,amount,price:same?'1':row.price};
   }
   function validDate(value) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -82,13 +92,15 @@
         const known = catalog.findByName(group,asset);
         if (known && symbol && symbol !== known.symbol) add(path('symbol'), `Для ${known.name} используйте символ ${known.symbol}. Выберите актив из списка.`);
         if (!known && symbol && catalog.findBySymbol(group==='cash'?'crypto':'cash',symbol)) add(path('symbol'), group==='cash'?'Криптовалюту добавьте в раздел «Криптоактивы».':'Денежную валюту добавьте в раздел «Денежные средства».');
+        const simpleCash=group==='cash'&&Object.prototype.hasOwnProperty.call(row,'amount');
+        const sameCurrency=symbol===currency;
         let quantity, price;
-        try { quantity = decimal(row.quantity, 'Количество'); } catch (e) { add(path('quantity'), e.message); }
+        try { quantity = decimal(simpleCash?row.amount:row.quantity, simpleCash?'Остаток':'Количество'); } catch (e) { add(path(simpleCash?'amount':'quantity'), e.message); }
         try {
-          price = decimal(row.price, 'Цена');
+          price = decimal(simpleCash&&sameCurrency?'1':row.price, simpleCash?'Курс':'Цена');
           if (price.units < 0n) add(path('price'), 'Цена не может быть отрицательной.');
         } catch (e) { add(path('price'), e.message); }
-        if (issues.length === start) assets[group].push({ asset, symbol, wallet, quantity:quantity.text, price:price.text, value:productMoney(quantity,price) });
+        if (issues.length === start) assets[group].push({ asset, symbol, wallet, quantity:quantity.text, amount:quantity.text, price:price.text, value:productMoney(quantity,price) });
       });
     }
     if (!(state.cash || []).length && !(state.crypto || []).length) {
@@ -133,15 +145,16 @@
     const model = validate(state);
     if (!model.errors.length) return { ...model, draft: false };
     const text = (value, max = 80) => String(value || '').trim().slice(0, max) || '—';
-    const asset = row => {
+    const asset = (row,group) => {
+      const simpleCash=group==='cash'&&Object.prototype.hasOwnProperty.call(row,'amount');
       let quantity, price, value = null;
-      try { quantity = decimal(row.quantity); } catch (_) {}
-      try { price = decimal(row.price); if (price.units < 0n) price = undefined; } catch (_) {}
+      try { quantity = decimal(simpleCash?row.amount:row.quantity); } catch (_) {}
+      try { price = decimal(simpleCash&&String(row.symbol||'').trim().toUpperCase()===model.currency?'1':row.price); if (price.units < 0n) price = undefined; } catch (_) {}
       if (quantity && price) value = productMoney(quantity, price);
       return { asset:text(row.asset), symbol:text(row.symbol,16), wallet:text(row.wallet,40),
-        quantity:quantity ? quantity.text : '—', price:price ? price.text : '—', value };
+        quantity:quantity ? quantity.text : '—', amount:quantity ? quantity.text : '—', price:price ? price.text : '—', value };
     };
-    const cash = (state.cash || []).map(asset), crypto = (state.crypto || []).map(asset);
+    const cash = (state.cash || []).map(row=>asset(row,'cash')), crypto = (state.crypto || []).map(row=>asset(row,'crypto'));
     const sum = rows => rows.some(row => row.value === null) ? null : rows.reduce((total,row) => total + row.value,0n);
     const cashTotal = cash.length || crypto.length ? sum(cash) : null, cryptoTotal = cash.length || crypto.length ? sum(crypto) : null;
     const total = !cash.length && !crypto.length || cashTotal === null || cryptoTotal === null ? null : cashTotal + cryptoTotal;
@@ -153,5 +166,5 @@
     });
     return { ...model, cash, crypto, transactions:sortTransactions(transactions), cashTotal, cryptoTotal, total, draft:true };
   }
-  return { decimal, toMoney, productMoney, money, validDate, validate, preview, sortTransactions, types, statuses };
+  return { cashRow, decimal, toMoney, productMoney, money, validDate, validate, preview, sortTransactions, types, statuses };
 });

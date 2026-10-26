@@ -29,7 +29,8 @@
   function set(input,value,settled=true){
     const normalized=canonical(value);
     input.dataset.numericValue=normalized;
-    input.value=display(normalized,settled?Number(input.dataset.numericPrecision||0):0);
+    const visible=settled?normalized.replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,''):normalized;
+    input.value=display(visible,settled?Number(input.dataset.numericPrecision||0):0);
   }
   function caretAt(value,count){
     if(!count)return 0;

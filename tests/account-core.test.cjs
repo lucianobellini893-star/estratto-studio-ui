@@ -12,7 +12,7 @@ test('calculations use exact decimals, including half-cent rounding at four deci
  assert.equal(core.productMoney(core.decimal('0.1'),core.decimal('0.2')),200n);
  assert.equal(core.toMoney(core.decimal('1.23445')),12345n);
  assert.equal(core.toMoney(core.decimal('-1.23445')),-12345n);
- assert.equal(core.money(-10000n,true),'−1,0000');
+ assert.equal(core.money(-10000n,true),'−1,00');
 });
 test('decimal comma, European grouping and negative sign are accepted',()=>{
  assert.equal(core.toMoney(core.decimal('1.234,5678')),12345678n);
@@ -134,4 +134,27 @@ test('validated PDF model and incomplete preview both use the same chronological
 test('unfinished dates follow dated transactions without changing equal-date insertion order',()=>{
  const rows=[{date:'',reference:'EMPTY-1'},{date:'2026-07-29',reference:'DATED'},{date:'bad',reference:'EMPTY-2'}];
  assert.deepEqual(core.sortTransactions(rows).map(row=>row.reference),['DATED','EMPTY-1','EMPTY-2']);
+});
+
+test('money hides redundant zeros while preserving nonzero subcent precision',()=>{
+ assert.equal(core.money(11200000n),'1.120,00');
+ assert.equal(core.money(136360000n,true),'+13.636,00');
+ assert.equal(core.money(11200n),'1,12');
+ assert.equal(core.money(11230n),'1,123');
+ assert.equal(core.money(1n),'0,0001');
+ assert.equal(core.money(0n),'0,00');
+});
+test('cash in the account currency is a direct balance with no price multiplier',()=>{
+ const result=core.validate(state({currency:'EUR',cash:[asset({amount:'1120',price:'1.12'})]}));
+ assert.deepEqual(result.errors,[]);assert.equal(result.total,11200000n);
+ assert.equal(core.preview(state({currency:'EUR',clientName:'',cash:[asset({amount:'1120',price:''})]})).total,11200000n);
+});
+test('legacy cash migration preserves previous valued balance and is idempotent',()=>{
+ const migrated=core.cashRow(asset({quantity:'1',price:'1.12'}),'EUR');
+ assert.equal(migrated.amount,'1.1200');assert.equal(migrated.price,'1');
+ assert.deepEqual(core.cashRow(migrated,'EUR'),migrated);
+ const fx=core.cashRow(asset({quantity:'2',price:'1.147'}),'USD');
+ assert.equal(fx.amount,'2');assert.equal(core.validate(state({cash:[fx]})).total,22940n);
+ const invalid=core.cashRow(asset({price:'bad'}),'EUR');assert.equal(invalid.amount,'');
+ assert.ok(core.validate(state({currency:'EUR',cash:[invalid]})).issues.some(issue=>issue.path==='cash.0.amount'));
 });

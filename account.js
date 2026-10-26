@@ -6,7 +6,7 @@
   const storeKey = 'estratto-conto.v1';
   const now = new Date();
   const today = [now.getFullYear(), String(now.getMonth()+1).padStart(2,'0'), String(now.getDate()).padStart(2,'0')].join('-');
-  const initial = { clientName:'', clientId:'', accountId:'', publicId:'', date:today, currency:'USD', cash:[], crypto:[], transactions:[] };
+  const initial = { clientName:'', clientId:'', accountId:'', publicId:'', date:today, currency:'EUR', cash:[], crypto:[], transactions:[] };
   let state = { ...initial };
   try {
     const saved = JSON.parse(localStorage.getItem(storeKey));
@@ -21,6 +21,7 @@
   for(const row of state.cash)if(catalog.findByName('cash',row.asset)?.symbol==='EUR'&&String(row.symbol||'').trim().toUpperCase()==='ETH'){
     row.symbol='EUR';repairedSymbol=true;
   }
+  state.cash=state.cash.map(row=>core.cashRow(row,state.currency));
   if(!state.publicId&&state.clientId)state.publicId=state.clientId;
   const formatPublicId=value=>String(value||'').replace(/\s+/g,'').toUpperCase().replace(/(.{4})(?=.)/g,'$1 ');
   const statusLabels={approved:'Подтверждено',pending:'Ожидает одобрения',failed:'Не выполнено',rejected:'Отклонено',cancelled:'Отменено'};
@@ -40,7 +41,7 @@
     if (options.max) input.maxLength = options.max;
     if (options.textarea) { input.rows=2; input.maxLength=300; }
     input.value = state[group][index][key] || (key==='status'?'approved':'');
-    if(options.number)numbers.attach(input,{value:input.value,precision:key==='price'?4:key==='amount'?2:0});
+    if(options.number)numbers.attach(input,{value:input.value,precision:key==='amount'?2:0});
     wrapper.append(input);
     if(['asset','symbol','wallet','currency'].includes(key))attachPicker(input,group,index,key);
     return wrapper;
@@ -55,9 +56,10 @@
         const changed=String(row.symbol||'').trim().toUpperCase()!==item.symbol || previousAsset?.symbol!==item.symbol;
         row.asset=item.name;row.symbol=item.symbol;
         $(`ac-${group}-${index}-asset`).value=item.name;$(`ac-${group}-${index}-symbol`).value=item.symbol;
-        if(changed){row.price=group==='cash'&&item.symbol===state.currency.trim().toUpperCase()?'1':'';numbers.set($(`ac-${group}-${index}-price`),row.price);}
+        if(changed){row.price=group==='cash'&&item.symbol===state.currency.trim().toUpperCase()?'1':'';const priceInput=$(`ac-${group}-${index}-price`);if(priceInput)numbers.set(priceInput,row.price);}
       } else state[group][index][key]=key==='wallet'?item.name:item.symbol;
       if(!pair)input.value=state[group][index][key];
+      if(group==='cash'&&pair)renderRows('cash');
       persist();invalidate();
     }});
   }
@@ -81,8 +83,11 @@
         article.append(row1,row2,field(group,index,'description','Описание',{textarea:true}),row3);
       } else {
         row1.append(field(group,index,'asset',group==='crypto'?'Название криптовалюты':'Название валюты',{max:80,placeholder:group==='cash'?'Euro':'Ethereum'}),field(group,index,'symbol',group==='crypto'?'Символ криптовалюты':'Код валюты',{max:16,placeholder:group==='cash'?'EUR':'ETH'}));
-        row2.append(field(group,index,'quantity','Количество',{number:true,placeholder:'0.0000'}),field(group,index,'price',`Цена (${state.currency || 'USD'})`,{number:true,placeholder:'0.0000'}));
-        article.append(row1,field(group,index,'wallet','Кошелёк / Портфель',{max:40,placeholder:'Spot'}),row2);
+        if(group==='cash'){
+          row2.append(field(group,index,'amount',`Остаток (${row.symbol||state.currency})`,{number:true,placeholder:'0,00'}));
+          if(String(row.symbol||'').trim().toUpperCase()!==state.currency.trim().toUpperCase())row2.append(field(group,index,'price',`Курс в ${state.currency} за 1 ${row.symbol||'ед.'}`,{number:true,placeholder:'1'}));
+        }else row2.append(field(group,index,'quantity','Количество',{number:true,placeholder:'0'}),field(group,index,'price',`Цена (${state.currency})`,{number:true,placeholder:'0'}));
+        article.append(row1,field(group,index,'wallet','Кошелёк / Портфель',{max:40,placeholder:group==='cash'?'Trading':'Spot'}),row2);
         const total=node('div','account-row-total'); total.append(node('span','','Стоимость'));
         const result=node('output'); result.id=`ac-${group}-${index}-value`; total.append(result); article.append(total);
       }
@@ -97,7 +102,7 @@
     $('ac-crypto-total').textContent = valid ? `${core.money(model.cryptoTotal)} ${model.currency}` : '—';
     for (const group of ['cash','crypto']) state[group].forEach((row,index) => {
       let text='—';
-      try { text=core.money(core.productMoney(core.decimal(row.quantity),core.decimal(row.price)))+' '+(state.currency||'USD').toUpperCase(); } catch (_) {}
+      try { text=core.money(core.productMoney(core.decimal(group==='cash'?row.amount:row.quantity),core.decimal(group==='cash'&&String(row.symbol||'').trim().toUpperCase()===state.currency.trim().toUpperCase()?'1':row.price)))+' '+(state.currency||'USD').toUpperCase(); } catch (_) {}
       const output=$(`ac-${group}-${index}-value`); if(output)output.textContent=text;
     });
   }
@@ -175,8 +180,11 @@
         y+=6;
       }
       const assetColumns=[['ATTIVITÀ',62],['SIMBOLO',26],['PORTAFOGLIO',40],['QUANTITÀ',42,true],[`PREZZO (${model.currency})`,45,true],[`VALORE (${model.currency})`,50,true]].map(([label,width,right])=>({label,width,right}));
-      const assetRows=rows=>rows.map(r=>({cells:[r.asset,r.symbol,r.wallet,r.quantity,r.price,r.value===null?'—':core.money(r.value)]}));
-      table('Disponibilità liquide',assetColumns,assetRows(model.cash),model.cashTotal,'Disponibilità liquide non indicate.');
+      const assetRows=rows=>rows.map(r=>({cells:[r.asset,r.symbol,r.wallet,numbers.display(numbers.canonical(r.quantity).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'')),numbers.display(numbers.canonical(r.price).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'')),r.value===null?'—':core.money(r.value)]}));
+      const foreignCash=model.cash.some(row=>row.symbol!==model.currency);
+      const cashColumns=(foreignCash?[['VALUTA',80],['PORTAFOGLIO',55],['SALDO',60,true],[`CONTROVALORE (${model.currency})`,70,true]]:[['VALUTA',90],['PORTAFOGLIO',85],[`SALDO (${model.currency})`,90,true]]).map(([label,width,right])=>({label,width,right}));
+      const cashRows=model.cash.map(row=>({cells:[`${row.asset} (${row.symbol})`,row.wallet,...(foreignCash?[row.amount==='—'?'—':core.money(core.toMoney(core.decimal(row.amount)))+' '+row.symbol]:[]),row.value===null?'—':core.money(row.value)]}));
+      table('Disponibilità liquide',cashColumns,cashRows,model.cashTotal,'Disponibilità liquide non indicate.');
       table('Criptoattività',assetColumns,assetRows(model.crypto),model.cryptoTotal,'Criptoattività non indicate.');
       const txColumns=[['DATA',26],['OPERAZIONE',34],['DESCRIZIONE',67],['IMPORTO',34,true],['VALUTA',20],['STATO',42],['RIFERIMENTO',42]].map(([label,width,right])=>({label,width,right}));
       const date=value=>value?value.split('-').reverse().join('/'):'—';
@@ -234,18 +242,19 @@
     const input=event.target;
     if(input.dataset.accountField){
       state[input.dataset.accountField]=input.value;
-      if(input.dataset.accountField==='currency')for(const price of document.querySelectorAll('#page-account [data-field=price]'))price.parentElement.firstChild.textContent=`Цена (${input.value.toUpperCase() || 'USD'})`;
+      if(input.dataset.accountField==='currency'){renderRows('cash');renderRows('crypto');}
       persist();invalidate();
     }
     else if(input.dataset.group){state[input.dataset.group][Number(input.dataset.index)][input.dataset.field]=input.dataset.numericInput?input.dataset.numericValue:input.value;persist();invalidate();}
     else if(input.dataset.profileField){const original=$(input.dataset.profileField);original.value=input.value;original.dispatchEvent(new Event('input',{bubbles:true}));}
   });
+  $('page-account').addEventListener('change',event=>{if(event.target.dataset.group==='cash'&&event.target.dataset.field==='symbol')renderRows('cash');});
   $('page-account').addEventListener('click',event=>{
     const add=event.target.closest('[data-account-add]'),remove=event.target.closest('[data-remove]');
     if(add){
       const group=add.dataset.accountAdd;
       if(state[group].length>=1000)return;
-      state[group].push(group==='transactions'?{date:state.date,type:'deposit',amount:'',currency:state.currency,description:'',reference:'',status:'approved'}:{asset:'',symbol:'',wallet:'Spot',quantity:'',price:''});
+      state[group].push(group==='transactions'?{date:state.date,type:'deposit',amount:'',currency:state.currency,description:'',reference:'',status:'approved'}:group==='cash'?{asset:catalog.findBySymbol('cash',state.currency)?.name||state.currency,symbol:state.currency,wallet:'Trading',amount:'',price:'1'}:{asset:'',symbol:'',wallet:'Spot',quantity:'',price:''});
       renderRows(group);persist();invalidate();$(`ac-${group}-${state[group].length-1}-${group==='transactions'?'date':'asset'}`).focus();
     }
     if(remove){
@@ -312,7 +321,7 @@
   picker.attach($('ac-currency'),{group:'currency',title:'Валюта оценки счёта',onSelect:item=>{
     $('ac-currency').value=item.symbol;$('ac-currency').dispatchEvent(new Event('input',{bubbles:true}));
   }});
-  if(repairedSymbol)persist();
+  persist();
   state.transactions=core.sortTransactions(state.transactions);
   for(const group of ['cash','crypto','transactions'])renderRows(group);
   moveLogo($('page-account').classList.contains('active')?'account':'editor');
