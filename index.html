@@ -238,7 +238,7 @@
        <div class="metric-detail"><span>Денежные средства</span><strong id="ac-cash-total">—</strong></div>
        <div class="metric-detail"><span>Криптоактивы</span><strong id="ac-crypto-total">—</strong></div>
       </div>
-      <div class="pv-bar"><span class="t">Выписка по торговому счёту</span><span class="s" id="ac-pv-status" role="status">Готовлю предпросмотр…</span><button type="button" class="btn primary" id="ac-download" disabled>Скачать черновик</button></div>
+      <div class="pv-bar"><span class="t">Выписка по торговому счёту</span><span class="s" id="ac-pv-status" role="status">Готовлю предпросмотр…</span><button type="button" class="btn primary" id="ac-download">Скачать PDF</button></div>
       <div class="msg" id="ac-validation" aria-live="polite"></div>
       <div class="msg" id="ac-download-message" role="status" hidden></div>
       <div class="stage" id="ac-stage"><div class="account-preview-empty"><span class="micro-label">ПРЕДПРОСМОТР PDF</span><p>Готовлю предпросмотр выписки…</p></div></div>
@@ -847,10 +847,6 @@ async function buildPdf(data, renderContent) {
     doc.setPage(p);
     if (p === 1) headerFirst(); else headerNext();
     footer(p, pages);
-    if (data.draft) {
-      f("InterSB", 8, C.RED);
-      doc.text("BOZZA · DATI INCOMPLETI", RIGHT, LOGO_TOP + 18, { align: "right" });
-    }
   }
   doc.setProperties({
     title: data.referenceDate ? `Estratto conto di trading ${data.referenceDate}` : `Estratto operazioni ${mode} ${data.from} - ${data.to}`,

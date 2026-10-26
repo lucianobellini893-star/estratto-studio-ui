@@ -47,58 +47,69 @@
     fee: 'Commissione', result: 'Risultato di trading', interest: 'Interessi', adjustment: 'Rettifica', other: 'Altro'
   };
   function validate(state) {
-    const errors = [], assets = { cash: [], crypto: [] }, transactions = [];
-    const required = (value, label, max = 80) => {
+    const issues = [], assets = { cash: [], crypto: [] }, transactions = [];
+    const add = (path, message) => issues.push({ path, message });
+    const required = (value, label, max, path) => {
       const text = String(value || '').trim();
-      if (!text) errors.push(`Заполните поле «${label}».`);
-      else if (text.length > max) errors.push(`${label}: не более ${max} символов.`);
+      if (!text) add(path, `Заполните поле «${label}».`);
+      else if (text.length > max) add(path, `${label}: не более ${max} символов.`);
       return text;
     };
-    const clientName = required(state.clientName, 'Имя клиента');
-    const clientId = ''; // Public IDs belong to trade statements, not account statements.
-    const accountId = required(state.accountId, 'Номер торгового счёта', 40);
-    if (!validDate(state.date || '')) errors.push('Укажите корректную дату выписки.');
-    const currency = String(state.currency || '').toUpperCase();
-    if (!/^[A-Z]{3}$/.test(currency)) errors.push('Укажите валюту оценки счёта: USD, EUR или другой трёхбуквенный код.');
+    const clientName = required(state.clientName, 'Имя клиента', 80, 'clientName');
+    const clientId = '';
+    const accountId = required(state.accountId, 'Номер торгового счёта', 40, 'accountId');
+    if (!validDate(state.date || '')) add('date', 'Укажите корректную дату выписки.');
+    const currency = String(state.currency || '').trim().toUpperCase();
+    if (!/^[A-Z]{3}$/.test(currency)) add('currency', 'Укажите трёхбуквенный код валюты, например USD или EUR.');
     for (const group of ['cash', 'crypto']) {
       (state[group] || []).forEach((row, index) => {
-        const label = `${group === 'cash' ? 'Денежные средства' : 'Криптоактивы'}, строка ${index + 1}`;
+        const start = issues.length, path = key => `${group}.${index}.${key}`;
+        const asset = required(row.asset, 'Название актива', 80, path('asset'));
+        const symbol = required(row.symbol, 'Символ', 16, path('symbol')).toUpperCase();
+        const wallet = required(row.wallet, 'Кошелёк / Портфель', 40, path('wallet'));
+        let quantity, price;
+        try { quantity = decimal(row.quantity, 'Количество'); } catch (e) { add(path('quantity'), e.message); }
         try {
-          const asset = String(row.asset || '').trim(), symbol = String(row.symbol || '').trim().toUpperCase();
-          const wallet = String(row.wallet || '').trim();
-          if (!asset || !symbol || !wallet) throw new Error('заполните название, символ и кошелёк.');
-          if (asset.length > 80 || symbol.length > 16 || wallet.length > 40) throw new Error('слишком длинное название, символ или кошелёк.');
-          const quantity = decimal(row.quantity, 'Количество'), price = decimal(row.price, 'Цена');
-          if (price.units < 0n) throw new Error('цена не может быть отрицательной.');
-          assets[group].push({ asset, symbol, wallet, quantity: quantity.text, price: price.text, value: productMoney(quantity, price) });
-        } catch (e) { errors.push(`${label}: ${e.message}`); }
+          price = decimal(row.price, 'Цена');
+          if (price.units < 0n) add(path('price'), 'Цена не может быть отрицательной.');
+        } catch (e) { add(path('price'), e.message); }
+        if (issues.length === start) assets[group].push({ asset, symbol, wallet, quantity:quantity.text, price:price.text, value:productMoney(quantity,price) });
       });
     }
-    if (!assets.cash.length && !assets.crypto.length) errors.push('Добавьте хотя бы один остаток в денежных средствах или криптоактивах. Для нулевого счёта укажите количество 0.');
-    const references = new Set();
+    if (!(state.cash || []).length && !(state.crypto || []).length) {
+      add('assets', 'Добавьте денежный остаток или криптоактив. Для нулевого счёта укажите количество 0.');
+    }
+    const references = new Map();
     (state.transactions || []).forEach((row, index) => {
+      const start = issues.length, path = key => `transactions.${index}.${key}`;
+      if (!validDate(row.date || '')) add(path('date'), 'Укажите корректную дату операции.');
+      else if (validDate(state.date || '') && row.date > state.date) add(path('date'), 'Дата операции позже даты выписки.');
+      if (!types[row.type]) add(path('type'), 'Выберите тип операции.');
+      let amount;
       try {
-        if (!validDate(row.date || '')) throw new Error('укажите корректную дату.');
-        if (validDate(state.date || '') && row.date > state.date) throw new Error('дата операции позже даты выписки.');
-        if (!types[row.type]) throw new Error('выберите тип операции.');
-        const amount = toMoney(decimal(row.amount, 'Сумма'));
-        if (!amount) throw new Error('сумма после округления до 4 знаков не может быть нулевой.');
-        if (row.type === 'deposit' && amount < 0n) throw new Error('пополнение должно иметь положительную сумму.');
-        if (['withdrawal','fee'].includes(row.type) && amount > 0n) throw new Error('для вывода или комиссии укажите сумму со знаком минус.');
-        const unit = String(row.currency || '').trim().toUpperCase();
-        if (!/^[A-Z]{3,10}$/.test(unit)) throw new Error('укажите валюту операции, например USD, EUR или USDT.');
-        const description = String(row.description || '').trim(), reference = String(row.reference || '').trim();
-        if (description.length > 300 || reference.length > 80) throw new Error('описание — до 300 символов, ID — до 80.');
-        if (reference && references.has(reference)) throw new Error(`ID «${reference}» уже используется в другой операции.`);
-        if (reference) references.add(reference);
-        transactions.push({ date: row.date, type: row.type, description, amount, currency: unit, reference });
-      } catch (e) { errors.push(`Операция ${index + 1}: ${e.message}`); }
+        amount = toMoney(decimal(row.amount, 'Сумма'));
+        if (!amount) add(path('amount'), 'Сумма после округления до 4 знаков не может быть нулевой.');
+        else if (row.type === 'deposit' && amount < 0n) add(path('amount'), 'Пополнение должно иметь положительную сумму.');
+        else if (['withdrawal','fee'].includes(row.type) && amount > 0n) add(path('amount'), 'Для вывода или комиссии укажите сумму со знаком минус.');
+      } catch (e) { add(path('amount'), e.message); }
+      const unit = String(row.currency || '').trim().toUpperCase();
+      if (!/^[A-Z]{3,10}$/.test(unit)) add(path('currency'), 'Укажите валюту операции, например USD, EUR или USDT.');
+      const description = String(row.description || '').trim(), reference = String(row.reference || '').trim();
+      if (description.length > 300) add(path('description'), 'Описание: не более 300 символов.');
+      if (reference.length > 80) add(path('reference'), 'ID: не более 80 символов.');
+      if (reference && references.has(reference)) {
+        const message = `ID «${reference}» уже используется в другой операции.`;
+        add(path('reference'), message);
+        const first = `transactions.${references.get(reference)}.reference`;
+        if (!issues.some(issue => issue.path === first)) add(first, message);
+      } else if (reference) references.set(reference,index);
+      if (issues.length === start) transactions.push({ date:row.date, type:row.type, description, amount, currency:unit, reference });
     });
-    const total = group => assets[group].reduce((sum, row) => sum + row.value, 0n);
-    return { errors, clientName, clientId, accountId, date: state.date, currency, ...assets, transactions,
-      cashTotal: total('cash'), cryptoTotal: total('crypto'), total: total('cash') + total('crypto') };
+    const total = group => assets[group].reduce((sum,row) => sum+row.value,0n);
+    return { errors:issues.map(issue => issue.message), issues, clientName, clientId, accountId, date:state.date, currency, ...assets, transactions,
+      cashTotal:total('cash'), cryptoTotal:total('crypto'), total:total('cash')+total('crypto') };
   }
-  // Incomplete forms can be previewed and downloaded only as an explicit draft.
+  // Preview incomplete forms without treating unknown numbers as zero.
   // Missing or invalid numbers remain unknown, rather than becoming zero.
   function preview(state) {
     const model = validate(state);

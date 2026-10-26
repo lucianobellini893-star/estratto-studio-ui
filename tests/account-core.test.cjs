@@ -45,7 +45,7 @@ test('empty account cannot become a zero balance by accident; explicitly entered
  assert.ok(core.validate(state({cash:[]})).errors.length);
  const result=core.validate(state({cash:[asset({quantity:'0'})]}));assert.deepEqual(result.errors,[]);assert.equal(result.total,0n);
 });
-test('empty form previews a marked draft without invented zero account balances',()=>{
+test('empty form preview does not invent zero account balances',()=>{
  const result=core.preview(state({clientName:'',clientId:'',accountId:'',cash:[]}));
  assert.equal(result.draft,true);assert.equal(result.total,null);assert.equal(result.cashTotal,null);assert.equal(result.cryptoTotal,null);assert.ok(result.errors.length);
 });
@@ -59,4 +59,14 @@ test('completed form produces a final model instead of a draft',()=>{
 test('account statements do not require or retain the trade public ID',()=>{
  const result=core.validate(state({clientId:''}));assert.deepEqual(result.errors,[]);assert.equal(result.clientId,'');
  const stored=core.validate(state({clientId:'OLD PUBLIC ID'}));assert.equal(stored.clientId,'');
+});
+test('validation identifies every missing asset field for inline highlighting',()=>{
+ const result=core.validate(state({cash:[asset({asset:'',symbol:'',wallet:'',quantity:'',price:''})]}));
+ for(const field of ['asset','symbol','wallet','quantity','price'])assert.ok(result.issues.some(issue=>issue.path===`cash.0.${field}`),field);
+ assert.ok(!result.issues.some(issue=>issue.path==='clientId'));
+});
+test('validation identifies the precise invalid transaction field and both duplicate reference fields',()=>{
+ const row={date:'2026-10-01',type:'withdrawal',amount:'-2',currency:'USD',reference:'DUP'};
+ const result=core.validate(state({transactions:[row,{...row,amount:'2'}]}));
+ for(const path of ['transactions.1.amount','transactions.0.reference','transactions.1.reference'])assert.ok(result.issues.some(issue=>issue.path===path),path);
 });

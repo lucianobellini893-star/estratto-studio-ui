@@ -17,7 +17,7 @@
     state[group] = state[group].filter(row => row && typeof row === 'object').slice(0,1000);
   }
   const labels = { deposit:'Пополнение', withdrawal:'Вывод', transfer:'Перевод', fee:'Комиссия', result:'Торговый результат', interest:'Проценты', adjustment:'Корректировка', other:'Другое' };
-  let lastPdf = null, generation = 0, renderGeneration = 0, timer = null;
+  let lastPdf = null, generation = 0, renderGeneration = 0, timer = null, attemptedDownload = false;
   const persist = () => { try { localStorage.setItem(storeKey, JSON.stringify(state)); } catch (_) {} };
   const node = (tag, className, text) => { const e = document.createElement(tag); if(className)e.className=className; if(text!==undefined)e.textContent=text; return e; };
   function field(group, index, key, label, options = {}) {
@@ -72,17 +72,37 @@
       const output=$(`ac-${group}-${index}-value`); if(output)output.textContent=text;
     });
   }
-  function invalidate() {
-    clearTimeout(timer); generation++; renderGeneration++; lastPdf=null; $('ac-download').disabled=true;
-    $('ac-download-message').hidden=true;
-    const checked=core.validate(state), model=core.preview(state); updateSummary(checked);
-    const box=$('ac-validation'); box.replaceChildren(); box.hidden=!model.errors.length;
-    if (model.errors.length) {
-      box.append(node('strong','','Показан черновик. Для готовой выписки исправьте:'));
-      const list=node('ul'); model.errors.slice(0,6).forEach(message=>list.append(node('li','',message)));box.append(list);
-      if(model.errors.length>6)box.append(node('p','',`И ещё ${model.errors.length-6} полей.`));
+  function issueTarget(path) {
+    if (path === 'assets') return document.querySelector('[data-account-add="cash"]');
+    const row = path.match(/^(cash|crypto|transactions)\.(\d+)\.(\w+)$/);
+    return row ? $(`ac-${row[1]}-${row[2]}-${row[3]}`) : document.querySelector(`[data-account-field="${path}"]`);
+  }
+  function showValidation(checked, focus = false) {
+    const root = $('page-account');
+    for (const target of root.querySelectorAll('[data-account-invalid]')) {
+      target.removeAttribute('aria-invalid'); target.removeAttribute('aria-describedby'); delete target.dataset.accountInvalid;
     }
-    $('ac-download').textContent=model.draft?'Скачать черновик':'Скачать PDF';
+    root.querySelectorAll('.account-field-error').forEach(message => message.remove());
+    const box = $('ac-validation'); box.replaceChildren(); box.hidden = !attemptedDownload || !checked.issues.length;
+    if (!attemptedDownload) return;
+    if (checked.issues.length) box.textContent = 'Заполните или исправьте поля, выделенные красным. PDF пока не скачан.';
+    checked.issues.forEach((issue,index) => {
+      const target = issueTarget(issue.path); if (!target || target.dataset.accountInvalid) return;
+      target.dataset.accountInvalid='true'; target.setAttribute('aria-invalid','true');
+      const message=node('span','account-field-error',issue.message); message.id=`account-error-${index}`;
+      target.setAttribute('aria-describedby',message.id);
+      if(target.closest('label.f'))target.closest('label.f').append(message); else target.after(message);
+    });
+    if (focus && checked.issues.length) {
+      const first = issueTarget(checked.issues[0].path);
+      if (first) { first.scrollIntoView({block:'center',behavior:'instant'}); first.focus({preventScroll:true}); }
+    }
+  }
+  function invalidate() {
+    clearTimeout(timer); generation++; renderGeneration++; lastPdf=null;
+    $('ac-download-message').hidden=true;
+    const checked=core.validate(state), model=core.preview(state); updateSummary(checked); showValidation(checked);
+    $('ac-download').textContent='Скачать PDF';
     $('ac-pv-status').textContent='Обновляю PDF…';$('ac-stage').setAttribute('aria-busy','true');
     const seq=generation;timer=setTimeout(()=>build(model,seq),300);
   }
@@ -136,20 +156,20 @@
   async function build(model,seq) {
     try {
       const profile=shared.collectProfile();
-      const data={...profile,mode:'conto',trades:[],clientName:model.clientName||'—',clientId:model.clientId||'—',accountId:model.accountId||'—',draft:model.draft,
+      const data={...profile,mode:'conto',trades:[],clientName:model.clientName||'—',clientId:model.clientId||'—',accountId:model.accountId||'—',
         referenceDate:core.validDate(model.date||'')?model.date.split('-').reverse().join('/'):'—',toIso:model.date,
         disclaimer:'Il presente documento riepiloga le disponibilità e i movimenti del conto alla data indicata, sulla base dei dati forniti. La valorizzazione degli attivi è espressa nella valuta di riferimento. I movimenti mantengono la propria valuta e non vengono sommati nuovamente al saldo. Documento riservato al cliente; non costituisce consulenza finanziaria.'};
       const result=await shared.buildPdf(data,drawContent(model));
       if(seq!==generation)return;
-      lastPdf={bytes:result.bytes,pages:result.pages,model};$('ac-download').disabled=false;
-      $('ac-pv-status').textContent=`${model.draft?'Черновик · ':''}${result.pages} ${result.pages===1?'страница':'стр.'} · ${model.transactions.length} операций`;
+      lastPdf={bytes:result.bytes,pages:result.pages,model,generation:seq};
+      $('ac-pv-status').textContent=`${result.pages} ${result.pages===1?'страница':'стр.'} · ${model.transactions.length} операций`;
       if($('page-account').classList.contains('active')) {
         try { await renderPreview(lastPdf); }
         catch(e) { if(seq===generation)previewError(e); }
       }
     } catch(e) {
       if(seq!==generation)return;
-      lastPdf=null;$('ac-download').disabled=true;$('ac-pv-status').textContent='Не удалось собрать PDF';
+      lastPdf=null;$('ac-pv-status').textContent='Не удалось собрать PDF';
       $('ac-validation').hidden=false;$('ac-validation').textContent='PDF не собран: '+e.message;
     } finally { if(seq===generation)$('ac-stage').removeAttribute('aria-busy'); }
   }
@@ -215,12 +235,22 @@
   });
   let resizeTimer;
   window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(lastPdf&&$('page-account').classList.contains('active'))renderPreview(lastPdf).catch(()=>{});},250);});
-  $('ac-download').addEventListener('click',()=>{
-    if(!lastPdf)return;
-    const slug=lastPdf.model.accountId.replace(/[^A-Za-z0-9]+/g,'_')||'account';
-    const url=URL.createObjectURL(new Blob([lastPdf.bytes],{type:'application/pdf'})),link=node('a');
-    link.href=url;link.download=`${lastPdf.model.draft?'bozza_':''}estratto_conto_${slug}_${(lastPdf.model.date||'').replace(/-/g,'')}.pdf`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
-    $('ac-download-message').textContent=lastPdf.model.draft?'Черновик PDF скачан. Документ содержит пометку BOZZA — данные ещё не заполнены полностью.':'PDF скачан.';$('ac-download-message').hidden=false;
+  $('ac-download').addEventListener('click',async()=>{
+    attemptedDownload=true;
+    const checked=core.validate(state); showValidation(checked,true);
+    if(checked.issues.length)return;
+    clearTimeout(timer);
+    const seq=generation;
+    $('ac-download').disabled=true;
+    try {
+      if(!lastPdf || lastPdf.generation!==seq)await build(core.preview(state),seq);
+      if(!lastPdf || generation!==seq || lastPdf.model.errors.length)return;
+      const slug=lastPdf.model.accountId.replace(/[^A-Za-z0-9]+/g,'_')||'account';
+      const url=URL.createObjectURL(new Blob([lastPdf.bytes],{type:'application/pdf'})),link=node('a');
+      link.href=url;link.download=`estratto_conto_${slug}_${(lastPdf.model.date||'').replace(/-/g,'')}.pdf`;
+      document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
+      $('ac-download-message').textContent='PDF скачан.';$('ac-download-message').hidden=false;
+    } finally { $('ac-download').disabled=false; }
   });
   for(const input of document.querySelectorAll('[data-account-field]'))input.value=state[input.dataset.accountField]||'';
   for(const group of ['cash','crypto','transactions'])renderRows(group);
