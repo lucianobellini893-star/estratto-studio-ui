@@ -41,3 +41,13 @@ body{padding:0;background:#f1f1ef}
 .sidebar-brand{gap:13px}
 .sidebar-brand strong{font-size:18px;letter-spacing:-.85px;line-height:1.1}
 .sidebar-brand small{font-size:9px;letter-spacing:.12em;color:#969aa2;margin-top:6px}
+/* Original wordmark supplied by the user. */
+.sidebar-brand{display:flex;align-items:center;gap:10px;padding:0 0 36px;white-space:nowrap}
+.sidebar-brand .brand-emblem{display:inline-flex;align-items:center;justify-content:center;flex:none;width:20px;height:20px;border:0;border-radius:0;background:none;box-shadow:none;color:#141822}
+.sidebar-brand .brand-emblem svg{width:20px;height:20px}
+.sidebar-brand strong{display:inline;font-size:18px;line-height:1.2;font-weight:600;letter-spacing:-.8px;color:#141822}
+.sidebar-brand strong span{font-weight:400}
+.brand-divider{flex:none;width:1px;height:22px;background:#d6dce7;margin:0 7px}
+.brand-workspace{font-size:12px;font-weight:400;color:#8390a1;letter-spacing:0}
+@media(min-width:761px){.studio-app{grid-template-columns:300px minmax(0,1fr)}}
+@media(max-width:760px){.sidebar-brand{padding-bottom:18px}}
