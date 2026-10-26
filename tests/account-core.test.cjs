@@ -86,3 +86,26 @@ test('custom assets remain valid without an external listing or price service',(
  const result=core.validate(state({cash:[],crypto:[asset({asset:'My Custom Token',symbol:'MCT',quantity:'2',price:'3'})]}));
  assert.deepEqual(result.errors,[]);assert.equal(result.total,60000n);
 });
+const numbers=require('../account-numbers.js');
+test('number display adds Italian separators without rounding crypto quantities',()=>{
+ assert.equal(numbers.display('1234567.89',2),'1.234.567,89');
+ assert.equal(numbers.display('0.0478964200',0),'0,0478964200');
+ assert.equal(numbers.display('-1234.56789',2),'-1.234,56789');
+ assert.equal(numbers.display('1000',2),'1.000,00');
+ assert.equal(numbers.display('1.1470',4),'1,1470');
+});
+test('pasted English and European numbers normalize to the same exact value',()=>{
+ assert.equal(numbers.canonical('1,234,567.8900'),'1234567.8900');
+ assert.equal(numbers.canonical('1.234.567,8900'),'1234567.8900');
+ assert.equal(numbers.fromEditing('1.234.567,89'),'1234567.89');
+ assert.equal(numbers.canonical('oops'),'oops');
+});
+test('imported operation ownership must match the account client',()=>{
+ const result=core.validate(state({transactions:[{date:'2026-10-01',type:'deposit',amount:'10',currency:'EUR',sourceClient:'ANOTHER CLIENT',reference:'100001'}]}));
+ assert.ok(result.issues.some(issue=>issue.path==='clientName'));
+});
+test('Italian transaction statuses are retained without changing the asset balance',()=>{
+ const result=core.validate(state({transactions:[{date:'2026-10-01',type:'withdrawal',amount:'-100',currency:'EUR',status:'pending'}]}));
+ assert.deepEqual(result.errors,[]);assert.equal(result.transactions[0].status,'pending');assert.equal(result.total,22940n);
+ assert.equal(core.statuses.pending,'In attesa di approvazione');
+});

@@ -1,7 +1,7 @@
 /* Manual trading-account workflow. The trade statement keeps its own data. */
 (() => {
   'use strict';
-  const core = window.EstrattoAccount, shared = window.EstrattoDocument, catalog = window.EstrattoAssets, picker = window.EstrattoPicker;
+  const core = window.EstrattoAccount, shared = window.EstrattoDocument, catalog = window.EstrattoAssets, picker = window.EstrattoPicker, numbers = window.EstrattoNumbers;
   const $ = id => document.getElementById(id);
   const storeKey = 'estratto-conto.v1';
   const now = new Date();
@@ -21,6 +21,7 @@
   for(const row of state.cash)if(catalog.findByName('cash',row.asset)?.symbol==='EUR'&&String(row.symbol||'').trim().toUpperCase()==='ETH'){
     row.symbol='EUR';repairedSymbol=true;
   }
+  const statusLabels={approved:'Подтверждено',pending:'Ожидает одобрения',failed:'Не выполнено',rejected:'Отклонено',cancelled:'Отменено'};
   const labels = { deposit:'Пополнение', withdrawal:'Вывод', transfer:'Перевод', fee:'Комиссия', result:'Торговый результат', interest:'Проценты', adjustment:'Корректировка', other:'Другое' };
   let lastPdf = null, generation = 0, renderGeneration = 0, timer = null, attemptedDownload = false;
   const persist = () => { try { localStorage.setItem(storeKey, JSON.stringify(state)); } catch (_) {} };
@@ -30,13 +31,14 @@
     const input = node(options.select ? 'select' : options.textarea ? 'textarea' : 'input');
     input.dataset.group = group; input.dataset.index = index; input.dataset.field = key;
     input.id = `ac-${group}-${index}-${key}`;
-    if (options.select) for (const [value, text] of Object.entries(labels)) { const o=node('option','',text); o.value=value; input.append(o); }
+    if (options.select) for (const [value, text] of Object.entries(options.select==='status'?statusLabels:labels)) { const o=node('option','',text); o.value=value; input.append(o); }
     else if (!options.textarea) input.type = options.date ? 'date' : 'text';
     if (options.number) { input.inputMode='decimal'; input.autocomplete='off'; }
     if (options.placeholder) input.placeholder = options.placeholder;
     if (options.max) input.maxLength = options.max;
     if (options.textarea) { input.rows=2; input.maxLength=300; }
-    input.value = state[group][index][key] || '';
+    input.value = state[group][index][key] || (key==='status'?'approved':'');
+    if(options.number)numbers.attach(input,{value:input.value,precision:key==='price'?4:key==='amount'?2:0});
     wrapper.append(input);
     if(['asset','symbol','wallet','currency'].includes(key))attachPicker(input,group,index,key);
     return wrapper;
@@ -51,7 +53,7 @@
         const changed=String(row.symbol||'').trim().toUpperCase()!==item.symbol || previousAsset?.symbol!==item.symbol;
         row.asset=item.name;row.symbol=item.symbol;
         $(`ac-${group}-${index}-asset`).value=item.name;$(`ac-${group}-${index}-symbol`).value=item.symbol;
-        if(changed){row.price=group==='cash'&&item.symbol===state.currency.trim().toUpperCase()?'1':'';$(`ac-${group}-${index}-price`).value=row.price;}
+        if(changed){row.price=group==='cash'&&item.symbol===state.currency.trim().toUpperCase()?'1':'';numbers.set($(`ac-${group}-${index}-price`),row.price);}
       } else state[group][index][key]=key==='wallet'?item.name:item.symbol;
       if(!pair)input.value=state[group][index][key];
       persist();invalidate();
@@ -73,7 +75,8 @@
       if (group==='transactions') {
         row1.append(field(group,index,'date','Дата',{date:true}),field(group,index,'type','Тип операции',{select:true}));
         row2.append(field(group,index,'amount','Сумма (+ / −)',{number:true,placeholder:'+100.00 или −25.00'}),field(group,index,'currency','Валюта',{max:10,placeholder:'USD'}));
-        article.append(row1,row2,field(group,index,'description','Описание',{textarea:true}),field(group,index,'reference','ID / Референс (необязательно)',{max:80}));
+        const row3=node('div','row');row3.append(field(group,index,'status','Статус',{select:'status'}),field(group,index,'reference','ID / Референс (необязательно)',{max:80}));
+        article.append(row1,row2,field(group,index,'description','Описание',{textarea:true}),row3);
       } else {
         row1.append(field(group,index,'asset',group==='crypto'?'Название криптовалюты':'Название валюты',{max:80,placeholder:group==='cash'?'Euro':'Ethereum'}),field(group,index,'symbol',group==='crypto'?'Символ криптовалюты':'Код валюты',{max:16,placeholder:group==='cash'?'EUR':'ETH'}));
         row2.append(field(group,index,'quantity','Количество',{number:true,placeholder:'0.0000'}),field(group,index,'price',`Цена (${state.currency || 'USD'})`,{number:true,placeholder:'0.0000'}));
@@ -159,7 +162,10 @@
           doc.setDrawColor(C.LINE);doc.setLineWidth(.4*PT);doc.line(MX,y+height,RIGHT,y+height);
           let x=MX;
           lines.forEach((cell,i)=>{
-            f('InterR',8.3,row.amountIndex===i?(row.amount===null?C.GRAY:row.amount>0n?C.GREEN:C.RED):C.BLACK);
+            let color=C.BLACK;
+            if(row.amountIndex===i)color=row.amount===null||row.status!=='approved'?C.GRAY:row.amount>0n?C.GREEN:C.RED;
+            if(row.statusIndex===i)color=row.status==='approved'?C.GREEN:['failed','rejected','cancelled'].includes(row.status)?C.RED:C.GRAY;
+            f('InterR',8.3,color);
             cell.forEach((text,j)=>doc.text(text,columns[i].right?x+columns[i].width-PAD:x+PAD,y+4.9+j*lineHeight,{align:columns[i].right?'right':'left'}));x+=columns[i].width;
           });y+=height;
         });
@@ -170,9 +176,9 @@
       const assetRows=rows=>rows.map(r=>({cells:[r.asset,r.symbol,r.wallet,r.quantity,r.price,r.value===null?'—':core.money(r.value)]}));
       table('Disponibilità liquide',assetColumns,assetRows(model.cash),model.cashTotal,'Disponibilità liquide non indicate.');
       table('Criptoattività',assetColumns,assetRows(model.crypto),model.cryptoTotal,'Criptoattività non indicate.');
-      const txColumns=[['DATA',28],['OPERAZIONE',42],['DESCRIZIONE',76],['IMPORTO',40,true],['VALUTA',22],['RIFERIMENTO',57]].map(([label,width,right])=>({label,width,right}));
+      const txColumns=[['DATA',26],['OPERAZIONE',34],['DESCRIZIONE',67],['IMPORTO',34,true],['VALUTA',20],['STATO',42],['RIFERIMENTO',42]].map(([label,width,right])=>({label,width,right}));
       const date=value=>value?value.split('-').reverse().join('/'):'—';
-      table('Movimenti del conto',txColumns,model.transactions.map(r=>({cells:[date(r.date),core.types[r.type]||'—',r.description||'—',r.amount===null?'—':core.money(r.amount,true),r.currency,r.reference||'—'],amount:r.amount,amountIndex:3})),undefined,'Dati sui movimenti non forniti.');
+      table('Movimenti del conto',txColumns,model.transactions.map(r=>({cells:[date(r.date),core.types[r.type]||'—',r.description||'—',r.amount===null?'—':core.money(r.amount,true),r.currency,core.statuses[r.status||'approved']||'—',r.reference||'—'],amount:r.amount,amountIndex:3,status:r.status||'approved',statusIndex:5})),undefined,'Dati sui movimenti non forniti.');
 
     };
   }
@@ -226,7 +232,7 @@
       if(input.dataset.accountField==='currency')for(const price of document.querySelectorAll('#page-account [data-field=price]'))price.parentElement.firstChild.textContent=`Цена (${input.value.toUpperCase() || 'USD'})`;
       persist();invalidate();
     }
-    else if(input.dataset.group){state[input.dataset.group][Number(input.dataset.index)][input.dataset.field]=input.value;persist();invalidate();}
+    else if(input.dataset.group){state[input.dataset.group][Number(input.dataset.index)][input.dataset.field]=input.dataset.numericInput?input.dataset.numericValue:input.value;persist();invalidate();}
     else if(input.dataset.profileField){const original=$(input.dataset.profileField);original.value=input.value;original.dispatchEvent(new Event('input',{bubbles:true}));}
   });
   $('page-account').addEventListener('click',event=>{
@@ -234,7 +240,7 @@
     if(add){
       const group=add.dataset.accountAdd;
       if(state[group].length>=1000)return;
-      state[group].push(group==='transactions'?{date:state.date,type:'deposit',amount:'',currency:state.currency,description:'',reference:''}:{asset:'',symbol:'',wallet:'Spot',quantity:'',price:''});
+      state[group].push(group==='transactions'?{date:state.date,type:'deposit',amount:'',currency:state.currency,description:'',reference:'',status:'approved'}:{asset:'',symbol:'',wallet:'Spot',quantity:'',price:''});
       renderRows(group);persist();invalidate();$(`ac-${group}-${state[group].length-1}-${group==='transactions'?'date':'asset'}`).focus();
     }
     if(remove){
@@ -276,6 +282,19 @@
       $('ac-download-message').textContent='PDF скачан.';$('ac-download-message').hidden=false;
     } finally { $('ac-download').disabled=false; }
   });
+  window.EstrattoAccountForm={
+    get:()=>JSON.parse(JSON.stringify(state)),
+    setClient:name=>{state.clientName=name;$('ac-client-name').value=name;persist();invalidate();},
+    importOperations:(rows,replace=false)=>{
+      const client=rows[0]?.sourceClient||'';
+      if(!rows.length)throw new Error('Нет операций для добавления.');
+      if(state.clientName.trim()&&window.EstrattoDeposits.normalize(state.clientName)!==window.EstrattoDeposits.normalize(client))throw new Error('Имя клиента отличается от отчёта. Проверьте имя перед добавлением.');
+      const result=window.EstrattoDeposits.merge(replace?[]:state.transactions,rows);
+      if(!state.clientName.trim()){state.clientName=client;$('ac-client-name').value=client;}
+      state.transactions=result.transactions;renderRows('transactions');persist();invalidate();
+      return result;
+    }
+  };
   for(const input of document.querySelectorAll('[data-account-field]'))input.value=state[input.dataset.accountField]||'';
   picker.attach($('ac-currency'),{group:'currency',title:'Валюта оценки счёта',onSelect:item=>{
     $('ac-currency').value=item.symbol;$('ac-currency').dispatchEvent(new Event('input',{bubbles:true}));

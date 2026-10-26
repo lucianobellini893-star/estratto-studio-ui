@@ -46,6 +46,7 @@
     deposit: 'Versamento', withdrawal: 'Prelievo', transfer: 'Trasferimento',
     fee: 'Commissione', result: 'Risultato di trading', interest: 'Interessi', adjustment: 'Rettifica', other: 'Altro'
   };
+  const statuses = { approved:'Approvato', pending:'In attesa di approvazione', failed:'Non riuscito', rejected:'Rifiutato', cancelled:'Annullato' };
   function validate(state) {
     const issues = [], assets = { cash: [], crypto: [] }, transactions = [];
     const add = (path, message) => issues.push({ path, message });
@@ -85,9 +86,12 @@
     const references = new Map();
     (state.transactions || []).forEach((row, index) => {
       const start = issues.length, path = key => `transactions.${index}.${key}`;
+      if(row.sourceClient && clientName && String(row.sourceClient).trim().toLowerCase().replace(/\s+/g,' ')!==clientName.toLowerCase().replace(/\s+/g,' ') && !issues.some(issue=>issue.path==='clientName'))add('clientName', `Депозит ${row.sourceReference||row.reference||index+1} принадлежит клиенту ${row.sourceClient}. Проверьте имя клиента и состав операций.`);
       if (!validDate(row.date || '')) add(path('date'), 'Укажите корректную дату операции.');
       else if (validDate(state.date || '') && row.date > state.date) add(path('date'), 'Дата операции позже даты выписки.');
       if (!types[row.type]) add(path('type'), 'Выберите тип операции.');
+      const status=row.status||'approved';
+      if(!statuses[status])add(path('status'),'Выберите статус операции.');
       let amount;
       try {
         amount = toMoney(decimal(row.amount, 'Сумма'));
@@ -106,7 +110,7 @@
         const first = `transactions.${references.get(reference)}.reference`;
         if (!issues.some(issue => issue.path === first)) add(first, message);
       } else if (reference) references.set(reference,index);
-      if (issues.length === start) transactions.push({ date:row.date, type:row.type, description, amount, currency:unit, reference });
+      if (issues.length === start) transactions.push({ date:row.date, type:row.type, description, amount, currency:unit, reference, status });
     });
     const total = group => assets[group].reduce((sum,row) => sum+row.value,0n);
     return { errors:issues.map(issue => issue.message), issues, clientName, clientId, accountId, date:state.date, currency, ...assets, transactions,
@@ -134,9 +138,9 @@
       let amount = null;
       try { amount = toMoney(decimal(row.amount)); } catch (_) {}
       return { date:validDate(row.date || '') ? row.date : '', type:row.type, description:text(row.description,300),
-        amount, currency:text(row.currency,10).toUpperCase(), reference:text(row.reference,80) };
+        amount, currency:text(row.currency,10).toUpperCase(), reference:text(row.reference,80), status:row.status||'approved' };
     });
     return { ...model, cash, crypto, transactions, cashTotal, cryptoTotal, total, draft:true };
   }
-  return { decimal, toMoney, productMoney, money, validDate, validate, preview, types };
+  return { decimal, toMoney, productMoney, money, validDate, validate, preview, types, statuses };
 });

@@ -446,3 +446,13 @@ select:focus-visible { outline:2px solid #72756b; outline-offset:3px; }
 .asset-picker-symbol { padding:4px 8px; border-radius:7px; background:#efefe8; color:#686858; font-size:11px; font-weight:500; flex:none; }
 .asset-picker-footer { flex:none; padding:10px 16px; border-top:1px solid var(--line); color:var(--muted); font-size:10px; line-height:1.5; }
 .asset-picker-empty { margin:0; padding:16px 10px; color:var(--muted); font-size:12px; line-height:1.7; }
+#ac-deposit-source { font:11px/1.7 var(--mono); }
+#ac-deposit-result { display:flex; flex-direction:column; gap:16px; min-width:0; }
+.deposit-import-summary { display:flex; flex-direction:column; gap:6px; color:var(--muted); font-size:11px; line-height:1.6; }
+.deposit-import-summary strong { color:var(--ink); font-size:13px; font-weight:500; }
+.deposit-replace { display:flex; align-items:center; gap:8px; color:var(--ink-2); font-size:11px; line-height:1.6; cursor:pointer; }
+.deposit-replace input { width:16px; height:16px; flex:none; accent-color:var(--accent); }
+#ac-deposit-conflict p { margin:0 0 12px; }
+#ac-deposit-error { color:var(--bad); background:var(--bad-soft); }
+#ac-deposit-success { color:#4f7756; background:#edf5ed; }
+#ac-deposit-preview td:last-child { text-align:right; }
