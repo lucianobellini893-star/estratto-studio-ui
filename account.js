@@ -146,7 +146,6 @@
       const assetRows=rows=>rows.map(r=>({cells:[r.asset,r.symbol,r.wallet,r.quantity,r.price,r.value===null?'—':core.money(r.value)]}));
       table('Disponibilità liquide',assetColumns,assetRows(model.cash),model.cashTotal,'Disponibilità liquide non indicate.');
       table('Criptoattività',assetColumns,assetRows(model.crypto),model.cryptoTotal,'Criptoattività non indicate.');
-      ensure(14);f('InterSB',11,C.BLACK);doc.text('Saldo complessivo del conto',MX,y+5);doc.text((model.total===null?'—':core.money(model.total))+' '+(model.currency||'—'),RIGHT,y+5,{align:'right'});y+=14;
       const txColumns=[['DATA',28],['OPERAZIONE',42],['DESCRIZIONE',76],['IMPORTO',40,true],['VALUTA',22],['RIFERIMENTO',57]].map(([label,width,right])=>({label,width,right}));
       const date=value=>value?value.split('-').reverse().join('/'):'—';
       table('Movimenti del conto',txColumns,model.transactions.map(r=>({cells:[date(r.date),core.types[r.type]||'—',r.description||'—',r.amount===null?'—':core.money(r.amount,true),r.currency,r.reference||'—'],amount:r.amount,amountIndex:3})),undefined,'Dati sui movimenti non forniti.');
@@ -157,6 +156,7 @@
     try {
       const profile=shared.collectProfile();
       const data={...profile,mode:'conto',trades:[],clientName:model.clientName||'—',clientId:model.clientId||'—',accountId:model.accountId||'—',
+        accountBalance:(model.total===null?'—':core.money(model.total))+' '+(model.currency||'—'),
         referenceDate:core.validDate(model.date||'')?model.date.split('-').reverse().join('/'):'—',toIso:model.date,
         disclaimer:'Il presente documento riepiloga le disponibilità e i movimenti del conto alla data indicata, sulla base dei dati forniti. La valorizzazione degli attivi è espressa nella valuta di riferimento. I movimenti mantengono la propria valuta e non vengono sommati nuovamente al saldo. Documento riservato al cliente; non costituisce consulenza finanziaria.'};
       const result=await shared.buildPdf(data,drawContent(model));

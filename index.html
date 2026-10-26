@@ -669,7 +669,8 @@ async function buildPdf(data, renderContent) {
   // Account identifiers have their own measured block; long names and company
   // addresses wrap without moving the divider or colliding with the table.
   function accountHeaderLayout() {
-    const leftWidth = 96, clientX = MX + 116, clientWidth = RIGHT - clientX;
+    const leftWidth = 96, clientX = MX + 116, balanceWidth = 66;
+    const clientWidth = RIGHT - clientX - (data.accountBalance ? balanceWidth + 12 : 0);
     const lines = (text, font, size, width, color) => {
       f(font, size, color);
       return doc.splitTextToSize(String(text || ""), width).map(text => ({ text, font, size, color }));
@@ -694,6 +695,15 @@ async function buildPdf(data, renderContent) {
         f(line.font, line.size, line.color); doc.text(line.text, x, TOP_Y + 14 + 7 + i * ROW_STEP);
       });
       paintLines(accountHeader.left, MX); paintLines(accountHeader.right, accountHeader.clientX);
+      if (data.accountBalance) {
+        const top = TOP_Y + 14 + 7;
+        f("InterR", 7.5, C.GRAY);
+        doc.text("SALDO DEL CONTO", RIGHT, top, { align: "right" });
+        let size = 12.5;
+        f("InterSB", size, C.BLACK);
+        while (tw(data.accountBalance) > 66 && size > 8) { size -= 0.5; f("InterSB", size, C.BLACK); }
+        doc.text(data.accountBalance, RIGHT, top + 6, { align: "right" });
+      }
       doc.setDrawColor(C.LIGHT); doc.setLineWidth(0.5 * PT);
       doc.line(MX + 100, TOP_Y + 14 + 3, MX + 100, accountHeader.bottom + 2);
       return;
