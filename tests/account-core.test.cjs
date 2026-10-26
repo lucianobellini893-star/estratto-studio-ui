@@ -35,7 +35,7 @@ test('debit and credit signs are checked instead of silently changing user data'
 });
 test('multiple currencies are retained and do not affect portfolio balance',()=>{
  const transactions=[{date:'2026-10-01',type:'deposit',amount:'100',currency:'EUR',reference:'T1'},{date:'2026-10-02',type:'fee',amount:'-2',currency:'USD',reference:'T2'}];
- const result=core.validate(state({transactions}));assert.deepEqual(result.errors,[]);assert.equal(result.total,22940n);assert.equal(result.transactions[0].currency,'EUR');
+ const result=core.validate(state({transactions}));assert.deepEqual(result.errors,[]);assert.equal(result.total,22940n);assert.equal(result.transactions.find(row=>row.reference==='T1').currency,'EUR');
 });
 test('duplicate references are rejected',()=>{
  const row={date:'2026-10-01',type:'deposit',amount:'1',currency:'USD',reference:'DUP'};
@@ -108,4 +108,30 @@ test('Italian transaction statuses are retained without changing the asset balan
  const result=core.validate(state({transactions:[{date:'2026-10-01',type:'withdrawal',amount:'-100',currency:'EUR',status:'pending'}]}));
  assert.deepEqual(result.errors,[]);assert.equal(result.transactions[0].status,'pending');assert.equal(result.total,22940n);
  assert.equal(core.statuses.pending,'In attesa di approvazione');
+});
+test('deposits and withdrawals interleave by full creation timestamp, newest first',()=>{
+ const rows=[
+  {reference:'D1',type:'deposit',date:'2026-07-29',sourceCreated:'2026-07-29 11:36:12'},
+  {reference:'D2',type:'deposit',date:'2026-07-29',sourceCreated:'2026-07-29 11:52:15'},
+  {reference:'W1',type:'withdrawal',date:'2026-07-29',sourceCreated:'2026-07-29 11:40:00'},
+  {reference:'W2',type:'withdrawal',date:'2026-07-30',sourceCreated:'2026-07-30 09:00:00'}
+ ];
+ assert.deepEqual(core.sortTransactions(rows).map(row=>row.reference),['W2','D2','W1','D1']);
+ assert.deepEqual(rows.map(row=>row.reference),['D1','D2','W1','W2']);
+});
+test('equal dates stay stable without grouping by operation type and manual date changes ignore old source time',()=>{
+ const equal=[{date:'2026-07-29',type:'withdrawal',reference:'W'},{date:'2026-07-29',type:'deposit',reference:'D'}];
+ assert.deepEqual(core.sortTransactions(equal).map(row=>row.reference),['W','D']);
+ const changed={date:'2026-07-29',sourceCreated:'2026-07-28 23:59:59',reference:'changed'};
+ const timed={date:'2026-07-29',sourceCreated:'2026-07-29 01:00:00',reference:'timed'};
+ assert.deepEqual(core.sortTransactions([changed,timed]).map(row=>row.reference),['timed','changed']);
+});
+test('validated PDF model and incomplete preview both use the same chronological order',()=>{
+ const transactions=[{date:'2026-07-29',sourceCreated:'2026-07-29 11:00:00',type:'deposit',amount:'1',currency:'EUR',reference:'OLD'},{date:'2026-07-29',sourceCreated:'2026-07-29 12:00:00',type:'withdrawal',amount:'-1',currency:'EUR',reference:'NEW'}];
+ assert.deepEqual(core.validate(state({transactions})).transactions.map(row=>row.reference),['NEW','OLD']);
+ assert.deepEqual(core.preview(state({transactions,clientName:''})).transactions.map(row=>row.reference),['NEW','OLD']);
+});
+test('unfinished dates follow dated transactions without changing equal-date insertion order',()=>{
+ const rows=[{date:'',reference:'EMPTY-1'},{date:'2026-07-29',reference:'DATED'},{date:'bad',reference:'EMPTY-2'}];
+ assert.deepEqual(core.sortTransactions(rows).map(row=>row.reference),['DATED','EMPTY-1','EMPTY-2']);
 });

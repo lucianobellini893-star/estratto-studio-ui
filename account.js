@@ -23,7 +23,7 @@
   }
   const statusLabels={approved:'Подтверждено',pending:'Ожидает одобрения',failed:'Не выполнено',rejected:'Отклонено',cancelled:'Отменено'};
   const labels = { deposit:'Пополнение', withdrawal:'Вывод', transfer:'Перевод', fee:'Комиссия', result:'Торговый результат', interest:'Проценты', adjustment:'Корректировка', other:'Другое' };
-  let lastPdf = null, generation = 0, renderGeneration = 0, timer = null, attemptedDownload = false, importIssue = '';
+  let lastPdf = null, generation = 0, renderGeneration = 0, timer = null, attemptedDownload = false, importIssue = '', importIssueTarget = 'ac-deposit-source';
   const persist = () => { try { localStorage.setItem(storeKey, JSON.stringify(state)); } catch (_) {} };
   const node = (tag, className, text) => { const e = document.createElement(tag); if(className)e.className=className; if(text!==undefined)e.textContent=text; return e; };
   function field(group, index, key, label, options = {}) {
@@ -268,7 +268,7 @@
   $('ac-download').addEventListener('click',async()=>{
     attemptedDownload=true;
     if(importIssue){
-      const source=$('ac-deposit-source');source.setAttribute('aria-invalid','true');
+      const source=$(importIssueTarget)||$('ac-deposit-source');source.setAttribute('aria-invalid','true');
       $('ac-deposit-error').textContent=importIssue;$('ac-deposit-error').hidden=false;
       source.scrollIntoView({block:'center',behavior:'instant'});source.focus({preventScroll:true});return;
     }
@@ -289,13 +289,15 @@
   });
   window.EstrattoAccountForm={
     get:()=>JSON.parse(JSON.stringify(state)),
-    setImportIssue:message=>{importIssue=String(message||'');},
+    setImportIssue:(message,target='ac-deposit-source')=>{importIssue=String(message||'');importIssueTarget=target;},
     setClient:name=>{state.clientName=name;$('ac-client-name').value=name;persist();invalidate();},
     importOperations:(rows,replace=false)=>{
       const client=rows[0]?.sourceClient||'';
       if(!rows.length)throw new Error('Нет операций для добавления.');
       if(state.clientName.trim()&&window.EstrattoDeposits.normalize(state.clientName)!==window.EstrattoDeposits.normalize(client))throw new Error('Имя клиента отличается от отчёта. Проверьте имя перед добавлением.');
-      const result=window.EstrattoDeposits.merge(replace?[]:state.transactions,rows);
+      const importedTypes=new Set(rows.map(row=>row.type));
+      const existing=replace?state.transactions.filter(row=>!importedTypes.has(row.type)):state.transactions;
+      const result=window.EstrattoDeposits.merge(existing,rows);
       if(!state.clientName.trim()){state.clientName=client;$('ac-client-name').value=client;}
       state.transactions=result.transactions;renderRows('transactions');persist();invalidate();
       return result;
@@ -306,6 +308,7 @@
     $('ac-currency').value=item.symbol;$('ac-currency').dispatchEvent(new Event('input',{bubbles:true}));
   }});
   if(repairedSymbol)persist();
+  state.transactions=core.sortTransactions(state.transactions);
   for(const group of ['cash','crypto','transactions'])renderRows(group);
   moveLogo($('page-account').classList.contains('active')?'account':'editor');
   syncProfile();invalidate();

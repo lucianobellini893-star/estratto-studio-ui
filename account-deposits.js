@@ -89,7 +89,7 @@
       if(status==='approved')totals.set(unit,(totals.get(unit)||0n)+core.toMoney(magnitude));
     }
     if(clients.size>1)throw new Error('В отчёте несколько клиентов. Скопируйте историю одного клиента.');
-    return {clientName:[...clients.values()][0]||'',transactions,skipped,totals:[...totals].map(([currency,amount])=>({currency,amount})),recognized:records.length,statusCounts,type};
+    return {clientName:[...clients.values()][0]||'',transactions:core.sortTransactions(transactions),skipped,totals:[...totals].map(([currency,amount])=>({currency,amount})),recognized:records.length,statusCounts,type};
   }
   function merge(existing,incoming){
     const seen=new Map(existing.map(row=>[String(row.sourceReference||row.reference||'').trim(),row]).filter(([id])=>id));
@@ -109,7 +109,7 @@
       added.push(row);seen.set(id,row);
     }
     if(existing.length+added.length>1000)throw new Error('В одной выписке поддерживается до 1000 операций.');
-    return {transactions:[...existing.map(row=>updates.get(row)||row),...added],added:added.length,updated:updates.size,skipped:skipped.length};
+    return {transactions:core.sortTransactions([...existing.map(row=>updates.get(row)||row),...added]),added:added.length,updated:updates.size,skipped:skipped.length};
   }
   return {parse,merge,normalize};
 });

@@ -42,6 +42,15 @@
     const [y,m,d] = value.split('-').map(Number), date = new Date(Date.UTC(y,m-1,d));
     return y >= 1900 && date.getUTCFullYear() === y && date.getUTCMonth() === m-1 && date.getUTCDate() === d;
   }
+  function sortTransactions(rows) {
+    return rows.map((row,index) => {
+      const date=validDate(row.date||'')?row.date:'';
+      const match=String(row.sourceCreated||'').match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?(?:\.(\d+))?/);
+      const hasTime=match&&match[1]===date&&Number(match[2])<24&&Number(match[3])<60&&Number(match[4]||0)<60;
+      const time=hasTime?`${match[2]}:${match[3]}:${match[4]||'00'}.${(match[5]||'').padEnd(9,'0').slice(0,9)}`:'00:00:00.000000000';
+      return {row,index,key:date?date+'T'+time:''};
+    }).sort((a,b)=>a.key===b.key?a.index-b.index:a.key<b.key?1:-1).map(item=>item.row);
+  }
   const types = {
     deposit: 'Versamento', withdrawal: 'Prelievo', transfer: 'Trasferimento',
     fee: 'Commissione', result: 'Risultato di trading', interest: 'Interessi', adjustment: 'Rettifica', other: 'Altro'
@@ -110,10 +119,10 @@
         const first = `transactions.${references.get(reference)}.reference`;
         if (!issues.some(issue => issue.path === first)) add(first, message);
       } else if (reference) references.set(reference,index);
-      if (issues.length === start) transactions.push({ date:row.date, type:row.type, description, amount, currency:unit, reference, status });
+      if (issues.length === start) transactions.push({ date:row.date, type:row.type, description, amount, currency:unit, reference, status, sourceCreated:row.sourceCreated||'' });
     });
     const total = group => assets[group].reduce((sum,row) => sum+row.value,0n);
-    return { errors:issues.map(issue => issue.message), issues, clientName, clientId, accountId, date:state.date, currency, ...assets, transactions,
+    return { errors:issues.map(issue => issue.message), issues, clientName, clientId, accountId, date:state.date, currency, ...assets, transactions:sortTransactions(transactions),
       cashTotal:total('cash'), cryptoTotal:total('crypto'), total:total('cash')+total('crypto') };
   }
   // Preview incomplete forms without treating unknown numbers as zero.
@@ -138,9 +147,9 @@
       let amount = null;
       try { amount = toMoney(decimal(row.amount)); } catch (_) {}
       return { date:validDate(row.date || '') ? row.date : '', type:row.type, description:text(row.description,300),
-        amount, currency:text(row.currency,10).toUpperCase(), reference:text(row.reference,80), status:row.status||'approved' };
+        amount, currency:text(row.currency,10).toUpperCase(), reference:text(row.reference,80), status:row.status||'approved',sourceCreated:row.sourceCreated||'' };
     });
-    return { ...model, cash, crypto, transactions, cashTotal, cryptoTotal, total, draft:true };
+    return { ...model, cash, crypto, transactions:sortTransactions(transactions), cashTotal, cryptoTotal, total, draft:true };
   }
-  return { decimal, toMoney, productMoney, money, validDate, validate, preview, types, statuses };
+  return { decimal, toMoney, productMoney, money, validDate, validate, preview, sortTransactions, types, statuses };
 });

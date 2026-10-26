@@ -197,17 +197,21 @@
       </section>
       <section class="card" id="ac-deposit-import" hidden aria-labelledby="ac-deposit-import-heading">
        <h2 id="ac-deposit-import-heading">Импорт операций <span class="chip">CRM</span></h2>
-       <label class="f" for="ac-deposit-kind">Тип истории<select id="ac-deposit-kind"><option value="deposit">Пополнения / Versamenti</option><option value="withdrawal">Выводы / Prelievi</option></select></label>
-       <label class="f" for="ac-deposit-source">Вставьте скопированную историю вместе с заголовками
-        <textarea id="ac-deposit-source" rows="9" spellcheck="false" placeholder="ID&#10;Dest currency&#10;Dest amount&#10;Order method&#10;Order status&#10;Trading users&#10;Created&#10;…"></textarea>
+       <label class="f" for="ac-deposit-source">Депозиты / Versamenti
+        <textarea id="ac-deposit-source" rows="7" spellcheck="false" placeholder="Вставьте историю пополнений с заголовками ID, Dest currency, Dest amount, Order status, Trading users, Created…"></textarea>
+        <span class="hint" id="ac-deposit-source-status" role="status">Можно оставить пустым, если нужны только выводы.</span>
        </label>
-       <p class="hint">Выберите пополнения или выводы. Статусы сохраняются и переводятся на итальянский; ожидающие и неисполненные заявки не считаются проведёнными. Notes не включаются. Номер счёта и остатки заполняются вручную.</p>
+       <label class="f" for="ac-withdrawal-source">Выводы / Prelievi
+        <textarea id="ac-withdrawal-source" rows="7" spellcheck="false" placeholder="Вставьте историю выводов с заголовками ID, Dest currency, Dest amount, Order status, Trading users, Created…"></textarea>
+        <span class="hint" id="ac-withdrawal-source-status" role="status">Можно оставить пустым, если нужны только пополнения.</span>
+       </label>
+       <p class="hint">Обе вставки объединяются в одну историю одного клиента: новые операции сверху, с учётом времени Created. Повторные ID не дублируются. Номер счёта и остатки заполните ниже.</p>
        <div class="msg" id="ac-deposit-error" role="status" hidden></div>
        <div id="ac-deposit-result" hidden>
         <div class="deposit-import-summary"><strong id="ac-deposit-client"></strong><span id="ac-deposit-count"></span><span id="ac-deposit-totals"></span></div>
         <div class="tablebox"><table class="parsed" id="ac-deposit-preview" aria-label="Распознанные операции"></table></div>
         <div class="msg" id="ac-deposit-conflict" hidden><p id="ac-deposit-conflict-text"></p><button type="button" class="btn small" id="ac-deposit-use-client">Подставить имя клиента из отчёта</button></div>
-        <label class="deposit-replace"><input id="ac-deposit-replace" type="checkbox"> Заменять текущую историю данными из вставки</label>
+        <label class="deposit-replace"><input id="ac-deposit-replace" type="checkbox"> Заменять историю только по заполненным видам операций</label>
         <button type="button" class="btn" id="ac-edit-imported">Редактировать операции вручную</button>
        </div>
        <div class="msg" id="ac-deposit-success" role="status" hidden></div>
