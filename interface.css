@@ -29,3 +29,9 @@ body{background:#dcdcd9;padding:36px;font-family:var(--sans);color:var(--ink)}
 .editor-layout .stage{background:#e5e5de;border-radius:24px}
 .editor-layout .controls{gap:18px}
 @media(max-width:760px){.top-tabs{min-width:0;flex:1}.editor-layout .stage{max-height:none;padding:12px}.editor-layout .card{padding:20px}.nav-children{padding-left:17px;margin-left:14px}.nav-child:before{left:-17px;width:17px}.studio-footer span:last-child{display:none}}
+/* Full-screen workspace: keep rounded cards inside an edge-to-edge shell. */
+body{padding:0;background:#f1f1ef}
+.studio-app{width:100%;max-width:none;min-height:100vh;margin:0;border-radius:0;overflow:clip}
+.sidebar{top:0;height:100vh}
+.studio-content{max-width:none}
+@media(max-width:760px){.sidebar{height:auto;position:relative}}
