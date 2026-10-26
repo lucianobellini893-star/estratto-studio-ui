@@ -55,7 +55,7 @@
       return text;
     };
     const clientName = required(state.clientName, 'Имя клиента');
-    const clientId = required(state.clientId, 'Публичный ID', 40);
+    const clientId = ''; // Public IDs belong to trade statements, not account statements.
     const accountId = required(state.accountId, 'Номер торгового счёта', 40);
     if (!validDate(state.date || '')) errors.push('Укажите корректную дату выписки.');
     const currency = String(state.currency || '').toUpperCase();

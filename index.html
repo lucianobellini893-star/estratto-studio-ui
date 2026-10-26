@@ -198,10 +198,7 @@
       <section class="card" aria-labelledby="ac-client-heading">
        <h2 id="ac-client-heading"><span class="step">2</span>Клиент и торговый счёт</h2>
        <label class="f">Имя и фамилия<input id="ac-client-name" data-account-field="clientName" type="text" maxlength="80" autocomplete="off" placeholder="Имя владельца счёта"></label>
-       <div class="row">
-        <label class="f">Публичный ID<input id="ac-client-id" data-account-field="clientId" type="text" class="mono" maxlength="40" autocomplete="off" placeholder="Public ID"></label>
-        <label class="f">Номер торгового счёта<input id="ac-account-id" data-account-field="accountId" type="text" class="mono" maxlength="40" autocomplete="off" placeholder="Account ID"></label>
-       </div>
+       <label class="f">Номер торгового счёта<input id="ac-account-id" data-account-field="accountId" type="text" class="mono" maxlength="40" autocomplete="off" placeholder="Account ID"></label>
        <div class="row">
         <label class="f">Дата выписки<input id="ac-date" data-account-field="date" type="date"></label>
         <label class="f">Валюта оценки<input id="ac-currency" data-account-field="currency" type="text" maxlength="3" autocomplete="off" placeholder="USD"></label>
@@ -683,8 +680,6 @@ async function buildPdf(data, renderContent) {
     ];
     const right = [
       ...lines(data.clientName, "InterM", 11.5, clientWidth, C.BLACK),
-      ...lines("ID pubblico", "InterR", 8.5, clientWidth, C.GRAY),
-      ...lines(fmtPid(data.clientId), "InterM", 9.5, clientWidth, C.BLACK),
       ...lines(`ID conto  ${data.accountId}`, "InterR", 8.5, clientWidth, C.GRAY)
     ];
     const bottom = TOP_Y + 14 + 7 + (Math.max(left.length, right.length) - 1) * ROW_STEP;
@@ -734,8 +729,7 @@ async function buildPdf(data, renderContent) {
       names.forEach((line, i) => doc.text(line, x, LOGO_TOP + 4.5 + i * 4));
       const idY = LOGO_TOP + 4.5 + names.length * 4;
       f("InterR", 8, C.GRAY);
-      doc.text(`ID pubblico  ${fmtPid(data.clientId)}`, x, idY);
-      doc.text(`ID conto  ${data.accountId}`, x, idY + 4);
+      doc.text(`ID conto  ${data.accountId}`, x, idY);
       return;
     }
 

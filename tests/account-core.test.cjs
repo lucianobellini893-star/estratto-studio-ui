@@ -56,3 +56,7 @@ test('invalid numeric input remains unknown in a draft instead of being silently
 test('completed form produces a final model instead of a draft',()=>{
  const result=core.preview(state());assert.equal(result.draft,false);assert.deepEqual(result.errors,[]);assert.equal(result.total,22940n);
 });
+test('account statements do not require or retain the trade public ID',()=>{
+ const result=core.validate(state({clientId:''}));assert.deepEqual(result.errors,[]);assert.equal(result.clientId,'');
+ const stored=core.validate(state({clientId:'OLD PUBLIC ID'}));assert.equal(stored.clientId,'');
+});
