@@ -283,8 +283,17 @@
       <section class="card" aria-labelledby="mail-content-heading">
        <h2 id="mail-content-heading">Текст письма</h2>
        <label class="f">Заголовок (необязательно)<input id="mail-title" type="text" maxlength="200" autocomplete="off" placeholder="Oggetto del messaggio"></label>
-       <label class="f" for="mail-text">Напишите или вставьте текст<textarea id="mail-text" rows="15" maxlength="60000" placeholder="Gentile cliente,&#10;&#10;scriva qui il testo del messaggio.&#10;&#10;Cordiali saluti,"></textarea></label>
-       <p class="hint">Абзацы и переносы сохраняются. Письмо оформляется автоматически — без кнопок, рекламы и посторонних подписей.</p>
+       <div class="f"><label id="mail-text-label">Напишите или вставьте текст</label>
+        <div class="mail-format-toolbar" role="toolbar" aria-label="Оформление выделенного текста">
+         <button type="button" class="btn small" data-mail-format="bold" aria-label="Жирный" title="Жирный (Ctrl+B)"><b>Ж</b></button>
+         <button type="button" class="btn small" data-mail-format="italic" aria-label="Курсив" title="Курсив (Ctrl+I)"><i>К</i></button>
+         <button type="button" class="btn small" data-mail-format="underline" aria-label="Подчёркнутый"><u>Ч</u></button>
+         <label class="mail-color-label">Цвет <input type="color" id="mail-text-color" value="#3159ed" aria-label="Цвет выделенного текста"></label>
+         <button type="button" class="btn small" data-mail-format="removeFormat">Убрать выделение</button>
+        </div>
+        <div id="mail-text" class="mail-rich-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="mail-text-label" data-placeholder="Gentile cliente, …"></div>
+       </div>
+       <p class="hint">Выделите имя или название компании и выберите оформление. Вставленный текст получает шрифт письма.</p>
       </section>
       <section class="card" aria-labelledby="mail-logo-heading">
        <h2 id="mail-logo-heading">Логотип письма</h2>
@@ -294,6 +303,13 @@
        <label class="f">Размер логотипа<input id="mail-logo-size" type="range" min="20" max="64" value="32"><output id="mail-logo-size-value">32 px</output></label>
        <details class="mail-logo-hosting"><summary>Ссылка на логотип для почты</summary><label class="f">HTTPS-ссылка на PNG или JPG (необязательно)<input id="mail-logo-url" type="url" placeholder="https://ваш-сайт.com/logo.png" autocomplete="off"></label><p class="hint">Для наиболее совместимого HTML используйте публичную ссылку на картинку. Без ссылки SVG преобразуется во встроенный PNG; его поддержка зависит от почтового клиента. Файл .eml сохраняет логотип как вложенное изображение.</p><button type="button" class="btn small" id="mail-logo-download" disabled>Скачать PNG из SVG</button></details>
        <div class="msg" id="mail-logo-message" role="status" hidden></div>
+      </section>
+      <section class="card" aria-labelledby="mail-footer-heading">
+       <h2 id="mail-footer-heading">Подпись под письмом</h2>
+       <label class="mail-footer-toggle"><input type="checkbox" id="mail-footer-enabled"> Показывать подпись на сером фоне</label>
+       <label class="f">Небольшой текст<input id="mail-footer-label" type="text" maxlength="100" placeholder="Powered by"></label>
+       <label class="f">Название компании<input id="mail-footer-company" type="text" maxlength="100" placeholder="Название компании"></label>
+       <p class="hint">По центру под белой карточкой: небольшой серый текст и более выразительное название компании, как на примере.</p>
       </section>
       <section class="card" aria-labelledby="mail-export-heading">
        <h2 id="mail-export-heading">Готовое письмо</h2>

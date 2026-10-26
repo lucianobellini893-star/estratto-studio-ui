@@ -22,3 +22,15 @@ test('eml carries UTF8 text and an attached PNG referenced by CID',()=>{
  assert.match(Buffer.from(html,'base64').toString('utf8'),/cid:estratto-logo@local/);
  assert.doesNotMatch(eml,/^To:|^From:/m);
 });
+test('selected text formatting exports only allowed inline styles and escaped content',()=>{
+ const output=mail.build({text:'Gentile Mario <Rossi>',runs:[{text:'Gentile '},{text:'Mario <Rossi>',bold:true,italic:true,underline:true,color:'#3159ed',html:'<script>bad</script>'}]});
+ assert.match(output.html,/<strong style="font-weight:600;">Mario &lt;Rossi&gt;<\/strong>/);
+ assert.match(output.html,/color:#3159ed/);assert.match(output.html,/<em>/);assert.match(output.html,/<u>/);assert.doesNotMatch(output.html,/<script/);
+ const invalid=mail.build({text:'Test',runs:[{text:'Test',color:'red; background:url(x)'}]});assert.doesNotMatch(invalid.html,/background:url/);
+ const stale=mail.build({text:'Updated',runs:[{text:'Old',bold:true}]});assert.match(stale.html,/Updated/);assert.doesNotMatch(stale.html,/>Old</);
+});
+test('editable company footer is optional, escaped and included in plain text',()=>{
+ const state={text:'Test',footerEnabled:true,footerLabel:'Powered by',footerCompany:'Studio <Example>'};
+ const built=mail.build(state);assert.match(built.html,/Studio &lt;Example&gt;/);assert.match(built.plainText,/Powered by Studio <Example>/);
+ assert.doesNotMatch(mail.build({...state,footerEnabled:false}).html,/Powered by|Studio &lt;Example&gt;/);
+});

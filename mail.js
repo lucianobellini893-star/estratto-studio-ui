@@ -3,7 +3,7 @@
   'use strict';
   const core=window.EstrattoMail,shared=window.EstrattoDocument,$=id=>document.getElementById(id),key='estratto-mail.v1';
   let saved={};try{saved=JSON.parse(localStorage.getItem(key)||'{}')||{};}catch(_){}
-  const state={title:'',text:'',logoUrl:'',logoHeight:32,layout:'horizontal',parts:[],...saved,logoData:''};
+  const state={title:'',text:'',logoUrl:'',logoHeight:32,layout:'horizontal',parts:[],footerEnabled:false,footerLabel:'Powered by',footerCompany:'',...saved,logoData:''};
   if(!Array.isArray(state.parts))state.parts=[];
   state.parts=state.parts.slice(0,4);let sequence=0,busy=false,timer;
   const options={fontBase:new URL('fonts/',location.href).href};
@@ -56,9 +56,52 @@
       state.parts=next;partsUI();await renderLogo();
     }catch(error){message('mail-logo-message',error.message==='parse'?'Это не корректный SVG-файл.':error.message,true);}
   }
-  for(const [id,field] of [['mail-title','title'],['mail-text','text'],['mail-logo-url','logoUrl'],['mail-logo-size','logoHeight']]){
+  for(const [id,field] of [['mail-title','title'],['mail-footer-label','footerLabel'],['mail-footer-company','footerCompany'],['mail-logo-url','logoUrl'],['mail-logo-size','logoHeight']]){
     $(id).value=state[field];$(id).addEventListener('input',()=>{state[field]=id==='mail-logo-size'?Number($(id).value):$(id).value;$(id).removeAttribute('aria-invalid');message('mail-export-message','');clearTimeout(timer);timer=setTimeout(()=>{persist();refresh();},140);});
   }
+  const editor=$('mail-text');
+  if(Array.isArray(state.runs)&&state.runs.map(run=>String(run.text||'')).join('')===state.text)editor.innerHTML=core.paragraphs(state.text,state.runs);
+  else editor.textContent=state.text;
+  let selectionRange=null;
+  function rememberSelection(){const selection=getSelection();if(selection.rangeCount&&editor.contains(selection.anchorNode)&&editor.contains(selection.focusNode))selectionRange=selection.getRangeAt(0).cloneRange();}
+  document.addEventListener('selectionchange',rememberSelection);
+  function readEditor(){
+    const runs=[];
+    function add(text,format){if(text)runs.push({text,...format});}
+    function walk(node,format={}){
+      if(node.nodeType===Node.TEXT_NODE){add(node.textContent,format);return;}
+      if(node.nodeType!==Node.ELEMENT_NODE)return;
+      const tag=node.tagName;
+      if(tag==='BR'){add('\n',format);return;}
+      const next={...format};
+      if(['B','STRONG'].includes(tag)||Number(node.style.fontWeight)>=600)next.bold=true;
+      if(['I','EM'].includes(tag)||node.style.fontStyle==='italic')next.italic=true;
+      if(tag==='U'||node.style.textDecoration.includes('underline'))next.underline=true;
+      const color=node.getAttribute('color')||node.style.color;
+      if(color){const canvas=document.createElement('canvas').getContext('2d');canvas.fillStyle=color;const normalized=canvas.fillStyle;if(/^#[a-f0-9]{6}$/i.test(normalized))next.color=normalized;}
+      const block=['DIV','P'].includes(tag);
+      if(block&&runs.length&&!runs[runs.length-1].text.endsWith('\n'))add('\n',format);
+      for(const child of node.childNodes)walk(child,next);
+      if(block&&node.nextSibling)add('\n',format);
+    }
+    for(const node of editor.childNodes)walk(node);
+    state.runs=runs;state.text=runs.map(run=>run.text).join('');
+    editor.removeAttribute('aria-invalid');message('mail-export-message','');
+    clearTimeout(timer);timer=setTimeout(()=>{persist();refresh();},140);
+  }
+  editor.addEventListener('input',readEditor);
+  editor.addEventListener('paste',event=>{event.preventDefault();const text=event.clipboardData.getData('text/plain');document.execCommand('insertText',false,text);readEditor();});
+  function format(command,value){
+    editor.focus();if(selectionRange&&editor.contains(selectionRange.commonAncestorContainer)){const selection=getSelection();selection.removeAllRanges();selection.addRange(selectionRange);}
+    document.execCommand(command,false,value);rememberSelection();readEditor();
+  }
+  document.querySelectorAll('[data-mail-format]').forEach(button=>{
+    button.addEventListener('mousedown',event=>event.preventDefault());
+    button.addEventListener('click',()=>format(button.dataset.mailFormat));
+  });
+  $('mail-text-color').addEventListener('input',event=>format('foreColor',event.target.value));
+  $('mail-footer-enabled').checked=Boolean(state.footerEnabled);
+  $('mail-footer-enabled').addEventListener('change',()=>{state.footerEnabled=$('mail-footer-enabled').checked;persist();refresh();});
   $('mail-logo-file').addEventListener('change',event=>upload(event.target,false));
   $('mail-logo-add').addEventListener('change',event=>upload(event.target,true));
   $('mail-logo-remove').addEventListener('click',()=>{state.parts=[];partsUI();renderLogo();});
