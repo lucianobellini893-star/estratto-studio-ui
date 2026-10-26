@@ -26,6 +26,7 @@
     <div class="nav-children" id="documents-children">
      <button type="button" data-page="upcoming" class="nav-child"><span>Overview</span></button>
      <button type="button" data-page="editor" class="nav-child"><span>Trade Statements</span><span class="nav-badge mint">LIVE</span></button>
+     <button type="button" data-page="account" class="nav-child"><span>Account Statements</span><span class="nav-badge mint">LIVE</span></button>
      <div class="nav-child nav-disabled" title="Будет доступно в следующих версиях"><span>Drafts</span><span class="nav-badge peach">Soon</span></div>
      <div class="nav-child nav-disabled"><span>History</span></div>
      <div class="nav-child nav-disabled"><span>Scheduled</span></div>
@@ -45,7 +46,7 @@
     <nav class="top-tabs" aria-label="Разделы">
       <button type="button" data-page="overview" class="top-tab active">Обзор</button>
       <button type="button" data-page="editor" class="top-tab">Выписки по сделкам</button>
-      <button type="button" data-page="upcoming" class="top-tab">Документы <span class="small-soon">скоро</span></button>
+      <button type="button" data-page="account" class="top-tab">Торговый счёт</button>
     </nav>
     <div class="top-actions"><span class="secure-tag"><span class="secure-dot"></span>Локальная работа</span><div class="account-avatar">ES</div></div>
   </header>
@@ -67,7 +68,7 @@
      <section class="metric-panel"><span class="micro-label">ОПЕРАЦИИ / В ТЕКУЩЕМ НАБОРЕ</span><h2>Ваши сделки</h2><div class="big-metric" id="studio-total">0<span>операций</span></div><div class="metric-track"><div id="studio-progress-a"></div><div id="studio-progress-c"></div></div><div class="metric-detail"><span><i class="dot-open"></i>Открытые</span><strong id="studio-open">0</strong></div><div class="metric-detail"><span><i class="dot-closed"></i>Закрытые</span><strong id="studio-closed">0</strong></div><div class="metric-note">Показатели рассчитываются по загруженным данным</div></section>
     </div>
     <div class="lower-grid">
-     <section class="module-panel"><div class="panel-heading smaller"><div><span class="micro-label">ИНСТРУМЕНТЫ</span><h2>Ваши модули</h2></div><span class="pill-count">01 активный</span></div><button class="module-row" type="button" data-page="editor"><span class="module-symbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l5 5v13H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v6h5M8 13h8M8 17h8"/></svg></span><span><strong>Выписка по сделкам</strong><small>Открытые и закрытые операции · PDF</small></span><span class="active-tag">Доступен</span><span class="module-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></button><div class="module-row soon"><span class="module-symbol muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg></span><span><strong>Другие виды выписок</strong><small>Новые форматы документов</small></span><span class="soon-tag">Скоро</span></div></section>
+     <section class="module-panel"><div class="panel-heading smaller"><div><span class="micro-label">ИНСТРУМЕНТЫ</span><h2>Ваши модули</h2></div><span class="pill-count">02 активных</span></div><button class="module-row" type="button" data-page="editor"><span class="module-symbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l5 5v13H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v6h5M8 13h8M8 17h8"/></svg></span><span><strong>Выписка по сделкам</strong><small>Открытые и закрытые операции · PDF</small></span><span class="active-tag">Доступен</span><span class="module-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></button><button class="module-row" type="button" data-page="account"><span class="module-symbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="3"/><path d="M3 10h18M7 15h4"/></svg></span><span><strong>Выписка по торговому счёту</strong><small>Остатки, криптоактивы и операции · PDF</small></span><span class="active-tag">Доступен</span><span class="module-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></button></section>
      <section class="info-panel"><div class="panel-heading smaller"><div><span class="micro-label">ПРОСТРАНСТВО</span><h2>Всё готово к работе</h2></div><span class="outline-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12 5 5L20 6"/></svg></span></div><p>Данные обрабатываются в вашем браузере. Формат существующего PDF остаётся неизменным.</p><div class="status-strip"><span class="status-led"></span> Генератор выписок активен <span class="status-end">●</span></div></section>
     </div>
    </section>
@@ -180,7 +181,71 @@
     </aside>
      </div>
    </section>
-   <section id="page-upcoming" class="studio-page" aria-label="Будущие модули"><div class="eyebrow">РАБОЧЕЕ ПРОСТРАНСТВО / ДОКУМЕНТЫ</div><h1>Единая библиотека документов</h1><div class="future-panel"><span class="future-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5zm-9 9 9 5 9-5M3 16l9 5 9-5"/></svg></span><h2>Место для будущих модулей</h2><p>Здесь появятся новые типы выписок и документов. Сейчас доступен рабочий модуль выписки по сделкам.</p><button type="button" class="new-doc-button" data-page="editor">Открыть генератор <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></div></section>
+   <section id="page-account" class="studio-page" aria-label="Выписка по торговому счёту">
+    <div class="editor-heading"><div><div class="eyebrow">ДОКУМЕНТЫ / ТОРГОВЫЙ СЧЁТ</div><h1>Выписка по счёту <span class="heading-subtle">/ Conto di trading</span></h1><p>Остатки и движения по счёту в вашем существующем формате PDF.</p></div><button type="button" class="back-overview" data-page="overview">← К обзору</button></div>
+    <div class="editor-layout account-layout">
+     <div class="controls">
+      <section class="card" aria-labelledby="ac-mode-heading">
+       <h2 id="ac-mode-heading"><span class="step">1</span>Способ заполнения</h2>
+       <div class="seg account-mode" role="group" aria-label="Способ заполнения выписки по счёту">
+        <button type="button" aria-pressed="true">Ручной ввод</button>
+        <button type="button" disabled aria-label="Автозаполнение — в разработке">Автозаполнение <span class="development-tag">В разработке</span></button>
+       </div>
+       <p class="hint">Пока заполняйте данные вручную. Автозаполнение из вставленного отчёта появится позже.</p>
+      </section>
+      <section class="card" aria-labelledby="ac-client-heading">
+       <h2 id="ac-client-heading"><span class="step">2</span>Клиент и торговый счёт</h2>
+       <label class="f">Имя и фамилия<input id="ac-client-name" data-account-field="clientName" type="text" maxlength="80" autocomplete="off" placeholder="Имя владельца счёта"></label>
+       <div class="row">
+        <label class="f">Публичный ID<input id="ac-client-id" data-account-field="clientId" type="text" class="mono" maxlength="40" autocomplete="off" placeholder="Public ID"></label>
+        <label class="f">Номер торгового счёта<input id="ac-account-id" data-account-field="accountId" type="text" class="mono" maxlength="40" autocomplete="off" placeholder="Account ID"></label>
+       </div>
+       <div class="row">
+        <label class="f">Дата выписки<input id="ac-date" data-account-field="date" type="date"></label>
+        <label class="f">Валюта оценки<input id="ac-currency" data-account-field="currency" type="text" maxlength="3" autocomplete="off" placeholder="USD"></label>
+       </div>
+       <p class="hint">Все цены и стоимости активов указываются в валюте оценки. Количество сохраняется до 10 знаков после запятой, стоимость округляется до 4.</p>
+      </section>
+      <section class="card" aria-labelledby="ac-cash-heading">
+       <h2 id="ac-cash-heading"><span class="step">3</span>Денежные средства <span class="count" id="ac-cash-count">0</span></h2>
+       <div class="account-rows" id="ac-cash-rows"></div>
+       <button type="button" class="btn small account-add" data-account-add="cash">+ Добавить денежный остаток</button>
+      </section>
+      <section class="card" aria-labelledby="ac-crypto-heading">
+       <h2 id="ac-crypto-heading"><span class="step">4</span>Криптоактивы <span class="count" id="ac-crypto-count">0</span></h2>
+       <div class="account-rows" id="ac-crypto-rows"></div>
+       <button type="button" class="btn small account-add" data-account-add="crypto">+ Добавить криптоактив</button>
+      </section>
+      <section class="card" aria-labelledby="ac-transactions-heading">
+       <h2 id="ac-transactions-heading"><span class="step">5</span>Операции по счёту <span class="count" id="ac-transactions-count">0</span></h2>
+       <p class="hint">Пополнения, выводы, переводы и комиссии идут отдельной таблицей «Movimenti del conto», вместо Stocks Portfolio. Пополнение — со знаком плюс, вывод и комиссия — со знаком минус. История операций не прибавляется повторно к текущим остаткам.</p>
+       <div class="account-rows" id="ac-transactions-rows"></div>
+       <button type="button" class="btn small account-add" data-account-add="transactions">+ Добавить операцию</button>
+      </section>
+      <section class="card" aria-labelledby="ac-company-heading">
+       <h2 id="ac-company-heading"><span class="step">6</span>Оформление документа</h2>
+       <label class="f">Название компании<input id="ac-co-name" data-profile-field="co-name" type="text" autocomplete="off"></label>
+       <label class="f">Адрес компании<textarea id="ac-co-addr" data-profile-field="co-addr" rows="2"></textarea></label>
+       <label class="f">Сайт для QR-кода<input id="ac-co-site" data-profile-field="co-site" type="text" autocomplete="off"></label>
+       <p class="hint">Компания, сайт и логотип общие для обоих видов выписок. Цвета и шрифты PDF сохранены.</p>
+       <div class="tool-row"><span class="chip" id="ac-logo-status"></span><button type="button" class="btn small" data-page="editor">Настроить логотип</button></div>
+      </section>
+     </div>
+     <aside class="preview" aria-label="Предпросмотр выписки по торговому счёту">
+      <div class="account-summary">
+       <div class="micro-label">ОСТАТКИ НА ДАТУ ВЫПИСКИ</div>
+       <div class="account-balance" id="ac-total">—</div>
+       <div class="metric-detail"><span>Денежные средства</span><strong id="ac-cash-total">—</strong></div>
+       <div class="metric-detail"><span>Криптоактивы</span><strong id="ac-crypto-total">—</strong></div>
+      </div>
+      <div class="pv-bar"><span class="t">Выписка по торговому счёту</span><span class="s" id="ac-pv-status" role="status">Заполните данные</span><button type="button" class="btn primary" id="ac-download" disabled>Скачать PDF</button></div>
+      <div class="msg" id="ac-validation" aria-live="polite"></div>
+      <div class="msg" id="ac-download-message" role="status" hidden></div>
+      <div class="stage" id="ac-stage"><div class="account-preview-empty"><span class="micro-label">ПРЕДПРОСМОТР PDF</span><p>Заполните клиента и добавьте остатки — здесь появится готовая выписка.</p></div></div>
+     </aside>
+    </div>
+   </section>
+   <section id="page-upcoming" class="studio-page" aria-label="Будущие модули"><div class="eyebrow">РАБОЧЕЕ ПРОСТРАНСТВО / ДОКУМЕНТЫ</div><h1>Единая библиотека документов</h1><div class="future-panel"><span class="future-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5zm-9 9 9 5 9-5M3 16l9 5 9-5"/></svg></span><h2>Место для будущих модулей</h2><p>Здесь появятся новые типы выписок и документов. Сейчас доступны выписки по сделкам и торговому счёту.</p><button type="button" class="new-doc-button" data-page="editor">Открыть генератор <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></div></section>
   </main>
   <footer class="studio-footer">ESTRATTO STUDIO <span>© 2026 · WORKSPACE</span><span>Документы формируются локально</span></footer>
  </div>
@@ -564,7 +629,7 @@ const COLS = ["ID", "STRUMENTO", "TIPO", "CAPITALE (EUR)", "LEVA", "APERTURA (UT
 const COL_W = [28, 30, 22, 32, 20, 40, 34, 34];
 const ROW_H = 7.4, HEAD_H = 7, TOTAL_H = 10, PAD = 7 * PT, TITLE_H = 14.4 * PT + 3;
 
-async function buildPdf(data) {
+async function buildPdf(data, renderContent) {
   const { jsPDF } = window.jspdf;
   const fonts = await loadFonts();
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
@@ -597,11 +662,45 @@ async function buildPdf(data) {
   }
   function drawPeriod() {
     f("InterR", 8, C.GRAY);
-    doc.text("PERIODO", RIGHT, LOGO_TOP + 3.5, { align: "right" });
+    doc.text(data.referenceDate ? "ESTRATTO CONTO DI TRADING" : "PERIODO", RIGHT, LOGO_TOP + 3.5, { align: "right" });
     f("InterM", 10.5, C.BLACK);
-    doc.text(`${data.from} – ${data.to}`, RIGHT, LOGO_TOP + 9, { align: "right" });
+    doc.text(data.referenceDate || `${data.from} – ${data.to}`, RIGHT, LOGO_TOP + 9, { align: "right" });
   }
+  // Account identifiers have their own measured block; long names and company
+  // addresses wrap without moving the divider or colliding with the table.
+  function accountHeaderLayout() {
+    const leftWidth = 96, clientX = MX + 116, clientWidth = RIGHT - clientX;
+    const lines = (text, font, size, width, color) => {
+      f(font, size, color);
+      return doc.splitTextToSize(String(text || ""), width).map(text => ({ text, font, size, color }));
+    };
+    const left = [
+      ...lines(data.coName, "InterM", 11.5, leftWidth, C.BLACK),
+      ...data.coAddr.flatMap(line => lines(line, "InterR", 8.5, leftWidth, C.GRAY))
+    ];
+    const right = [
+      ...lines(data.clientName, "InterM", 11.5, clientWidth, C.BLACK),
+      ...lines("ID pubblico", "InterR", 8.5, clientWidth, C.GRAY),
+      ...lines(fmtPid(data.clientId), "InterM", 9.5, clientWidth, C.BLACK),
+      ...lines(`ID conto  ${data.accountId}`, "InterR", 8.5, clientWidth, C.GRAY)
+    ];
+    const bottom = TOP_Y + 14 + 7 + (Math.max(left.length, right.length) - 1) * ROW_STEP;
+    if (bottom > 100) throw new Error("Сократите реквизиты компании: заголовок занимает слишком много места.");
+    return { left, right, clientX, bottom, contentTop: Math.max(FRAME_FIRST, bottom + 7) };
+  }
+  const accountHeader = data.accountId ? accountHeaderLayout() : null;
   function headerFirst() {
+    if (accountHeader) {
+      drawLogo(MX, LOGO_TOP, 14); drawPeriod();
+      const paintLines = (lines, x) => lines.forEach((line, i) => {
+        f(line.font, line.size, line.color); doc.text(line.text, x, TOP_Y + 14 + 7 + i * ROW_STEP);
+      });
+      paintLines(accountHeader.left, MX); paintLines(accountHeader.right, accountHeader.clientX);
+      doc.setDrawColor(C.LIGHT); doc.setLineWidth(0.5 * PT);
+      doc.line(MX + 100, TOP_Y + 14 + 3, MX + 100, accountHeader.bottom + 2);
+      return;
+    }
+
     const logoH = 14;
     drawLogo(MX, LOGO_TOP, logoH);
     drawPeriod();
@@ -623,6 +722,20 @@ async function buildPdf(data) {
     doc.line(barX, TOP_Y + logoH + 3, barX, lowest + 2);
   }
   function headerNext() {
+    if (accountHeader) {
+      const logoH = 11;
+      drawLogo(MX, LOGO_TOP, logoH); drawPeriod();
+      const x = MX + (data.logo ? Math.min(logoH * data.logo.ratio, 55) : logoH) + 6;
+      f("InterM", 10, C.BLACK);
+      const names = doc.splitTextToSize(data.clientName, RIGHT - x - 70);
+      names.forEach((line, i) => doc.text(line, x, LOGO_TOP + 4.5 + i * 4));
+      const idY = LOGO_TOP + 4.5 + names.length * 4;
+      f("InterR", 8, C.GRAY);
+      doc.text(`ID pubblico  ${fmtPid(data.clientId)}`, x, idY);
+      doc.text(`ID conto  ${data.accountId}`, x, idY + 4);
+      return;
+    }
+
     const logoH = 11;
     drawLogo(MX, LOGO_TOP, logoH);
     drawPeriod();
@@ -701,6 +814,9 @@ async function buildPdf(data) {
     doc.text(fmtEur(total, true, " EUR"), colX[7] + colWmm[7] - PAD, b, { align: "right" });
   }
 
+  if (renderContent) {
+    renderContent({ doc, f, C, W, H, MX, RIGHT, PT, PAD, ROW_H, HEAD_H, FRAME_FIRST: accountHeader ? accountHeader.contentTop : FRAME_FIRST, FRAME_NEXT, FRAME_BOTTOM });
+  } else {
   /* --- flow --- */
   let y = FRAME_FIRST;
   const newPage = () => { doc.addPage("a4", "landscape"); y = FRAME_NEXT; };
@@ -726,6 +842,8 @@ async function buildPdf(data) {
     totalRow(totalLabel, total, y);
   }
 
+  }
+
   /* --- headers & footers on every page --- */
   const pages = doc.getNumberOfPages();
   for (let p = 1; p <= pages; p++) {
@@ -734,7 +852,7 @@ async function buildPdf(data) {
     footer(p, pages);
   }
   doc.setProperties({
-    title: `Estratto operazioni ${mode} ${data.from} - ${data.to}`,
+    title: data.referenceDate ? `Estratto conto di trading ${data.referenceDate}` : `Estratto operazioni ${mode} ${data.from} - ${data.to}`,
     author: data.coName, subject: data.clientName
   });
   return { bytes: doc.output("arraybuffer"), pages };
@@ -1060,6 +1178,7 @@ function renderQR() {
 /* preview + download */
 let lastPdf = null, buildSeq = 0, timer = null;
 function onChange() {
+  document.dispatchEvent(new Event("estratto:profilechange"));
   renderParsed(); applyPeriodUI(); renderQR();
   $("pv-status").textContent = "Обновляю…";
   clearTimeout(timer);
@@ -1185,6 +1304,8 @@ $("download").addEventListener("click", async () => {
 let rt = null;
 window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { drawSelection(); if (lastPdf) renderPreview(lastPdf.bytes, buildSeq); }, 250); });
 
+window.EstrattoDocument = { buildPdf, collectProfile: collect };
+
 /* boot */
 (async () => {
   if (S.logoSvg) {
@@ -1203,11 +1324,12 @@ window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() =
   'use strict';
   const pageButtons = [...document.querySelectorAll('[data-page]')];
   function navigate(page){
-    if(!['overview','editor','upcoming'].includes(page))return;
+    if(!['overview','editor','account','upcoming'].includes(page))return;
     for(const p of document.querySelectorAll('.studio-page'))p.classList.toggle('active',p.id === 'page-'+page);
     for(const b of pageButtons){b.classList.toggle('active',b.dataset.page===page); if(b.classList.contains('nav-main') || b.classList.contains('nav-child')) { if(b.dataset.page===page)b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); }}
-    if(page==='editor'||page==='upcoming') {const g=document.getElementById('documents-group');g.classList.add('expanded');g.querySelector('.nav-toggle').setAttribute('aria-expanded','true');}
+    if(page==='editor'||page==='account'||page==='upcoming') {const g=document.getElementById('documents-group');g.classList.add('expanded');g.querySelector('.nav-toggle').setAttribute('aria-expanded','true');}
     window.scrollTo({top:0,behavior:'instant'});
+    document.dispatchEvent(new CustomEvent('estratto:navigate', { detail: page }));
   }
   for(const b of pageButtons)b.addEventListener('click',()=>navigate(b.dataset.page));
   document.querySelectorAll('.nav-toggle').forEach(btn=>btn.addEventListener('click',()=>{const group=btn.closest('.nav-group');const opened=group.classList.toggle('expanded');btn.setAttribute('aria-expanded',String(opened));}));
@@ -1223,8 +1345,10 @@ window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() =
   const watcher=new MutationObserver(updateMetrics);
   for(const id of ['cnt-aperte','cnt-chiuse'])watcher.observe(document.getElementById(id),{childList:true,characterData:true,subtree:true});
   updateMetrics();
-  if(location.hash==='#editor')navigate('editor');
+  if(['#editor','#account'].includes(location.hash))navigate(location.hash.slice(1));
 })();
 </script>
+<script src="account-core.js"></script>
+<script src="account.js"></script>
 </body>
 </html>
