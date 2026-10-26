@@ -289,7 +289,7 @@
     const checked=core.validate(state); showValidation(checked,true);
     if(checked.issues.length)return;
     clearTimeout(timer);
-    const seq=generation;
+    const seq=generation,historySnapshot=JSON.parse(JSON.stringify(state)),historyProfile=shared.getState();
     $('ac-download').disabled=true;
     try {
       if(!lastPdf || lastPdf.generation!==seq)await build(core.preview(state),seq);
@@ -298,6 +298,7 @@
       const url=URL.createObjectURL(new Blob([lastPdf.bytes],{type:'application/pdf'})),link=node('a');
       link.href=url;link.download=`estratto_conto_${slug}_${(lastPdf.model.date||'').replace(/-/g,'')}.pdf`;
       document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
+      window.EstrattoRecordExport?.('account','PDF скачан',historySnapshot,Object.fromEntries(['coName','coAddr','coSite','discA','discC','logoSvg','logoFills','logoParts','logoLayout','logoGap'].filter(key=>key in historyProfile).map(key=>[key,historyProfile[key]])));
       $('ac-download-message').textContent='PDF скачан.';$('ac-download-message').hidden=false;
     } finally { $('ac-download').disabled=false; }
   });

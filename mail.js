@@ -114,17 +114,17 @@
   }
   function download(content,type,name){const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   $('mail-copy-html').addEventListener('click',async()=>{
-    if(!ready())return;const html=core.build(state,options).html;
-    try{await navigator.clipboard.writeText(html);message('mail-export-message','HTML скопирован. Вставьте его в редактор исходного HTML письма.');}
+    if(!ready())return;const html=core.build(state,options).html,exportSnapshot=window.EstrattoMailForm.get();
+    try{await navigator.clipboard.writeText(html);window.EstrattoRecordExport?.('mail','HTML скопирован',exportSnapshot);message('mail-export-message','HTML скопирован. Вставьте его в редактор исходного HTML письма.');}
     catch(_){$('mail-source').open=true;$('mail-code').value=html;$('mail-code').focus();$('mail-code').select();message('mail-export-message','Код выделен. Нажмите Ctrl+C или ⌘C, чтобы скопировать.');}
   });
   $('mail-copy-formatted').addEventListener('click',async()=>{
-    if(!ready())return;const built=core.build(state,options);
-    try{await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([built.html],{type:'text/html'}),'text/plain':new Blob([built.plainText],{type:'text/plain'})})]);message('mail-export-message','Оформленное письмо скопировано. Вставьте его в тело нового письма Hostinger. Проверьте логотип перед отправкой.');}
+    if(!ready())return;const built=core.build(state,options),exportSnapshot=window.EstrattoMailForm.get();
+    try{await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([built.html],{type:'text/html'}),'text/plain':new Blob([built.plainText],{type:'text/plain'})})]);window.EstrattoRecordExport?.('mail','Письмо скопировано',exportSnapshot);message('mail-export-message','Оформленное письмо скопировано. Вставьте его в тело нового письма Hostinger. Проверьте логотип перед отправкой.');}
     catch(_){message('mail-export-message','Браузер не разрешил копирование оформления. Используйте HTML-код или скачайте файл письма.',true);}
   });
-  $('mail-download-html').addEventListener('click',()=>{if(ready())download(core.build(state,options).html,'text/html;charset=utf-8','messaggio.html');});
-  $('mail-download-eml').addEventListener('click',()=>{if(ready())download(core.eml(state,options),'message/rfc822','messaggio.eml');});
+  $('mail-download-html').addEventListener('click',()=>{if(ready()){download(core.build(state,options).html,'text/html;charset=utf-8','messaggio.html');window.EstrattoRecordExport?.('mail','HTML скачан');}});
+  $('mail-download-eml').addEventListener('click',()=>{if(ready()){download(core.eml(state,options),'message/rfc822','messaggio.eml');window.EstrattoRecordExport?.('mail','EML скачан');}});
   $('mail-logo-download').addEventListener('click',()=>{if(state.logoData){const a=document.createElement('a');a.href=state.logoData;a.download='logo-mail.png';a.click();}});
   for(const device of ['desktop','mobile'])$('mail-'+device).addEventListener('click',()=>{for(const item of ['desktop','mobile'])$('mail-'+item).setAttribute('aria-pressed',String(item===device));$('mail-preview-stage').classList.toggle('phone',device==='mobile');});
   window.EstrattoMailForm={get:()=>{const {logoData,...draft}=state;return JSON.parse(JSON.stringify(draft));}};

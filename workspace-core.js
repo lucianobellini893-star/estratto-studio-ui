@@ -27,8 +27,30 @@
   for(const client of value.clients)if(!object(client)||typeof client.id!=='string'||typeof client.name!=='string'||!client.name.trim()||typeof client.publicId!=='string'||!(/^[A-Z]{3}$/.test(client.currency)))throw new Error('Некорректная карточка клиента.');
   for(const draft of value.drafts)if(!object(draft)||typeof draft.id!=='string'||!types.includes(draft.type)||typeof draft.name!=='string'||!object(draft.data))throw new Error('Некорректный черновик.');
   for(const draft of value.drafts){documentData(draft.type,draft.data);if(draft.profile!==undefined)documentData('editor',draft.profile);}
+  for(const field of ['history','templates'])if(value[field]!==undefined){
+   if(!Array.isArray(value[field])||value[field].length>1000)throw new Error('Некорректный раздел '+field);
+   for(const row of value[field]){
+    if(!object(row)||typeof row.id!=='string'||typeof row.name!=='string')throw new Error('Некорректная запись '+field);
+    const type=field==='templates'?'mail':row.type;if(!types.includes(type))throw new Error('Неверный тип документа');documentData(type,row.data);
+    if(row.profile!==undefined)documentData('editor',row.profile);
+   }
+   if(new Set(value[field].map(row=>row.id)).size!==value[field].length)throw new Error('Повторяющиеся ID');
+  }
   for(const collection of [value.clients,value.drafts])if(new Set(collection.map(row=>row.id)).size!==collection.length)throw new Error('Повторяющиеся ID в библиотеке.');
   return value;
+ }
+ const variables=['client_name','company','amount','date'];
+ function applyTemplate(data,values){
+  const used=new Set();const replace=text=>String(text||'').replace(/{{\s*([^{}]+?)\s*}}/g,(all,key)=>{used.add(key);if(!variables.includes(key))throw new Error('Неизвестная подстановка: '+key);if(!String(values[key]||'').trim())throw new Error('Заполните подстановку: '+key);return String(values[key]);});
+  const result={...data,title:replace(data.title),text:replace(data.text)};
+  if(Array.isArray(data.runs)&&data.runs.map(run=>run.text||'').join('')===data.text){
+   // Replace against the full text so tokens may span differently formatted runs.
+   const runs=[];const text=String(data.text||'');let position=0;
+   const source=data.runs.map(run=>{const start=position;position+=String(run.text||'').length;return {...run,start,end:position};});
+   const append=(start,end)=>{for(const run of source){const a=Math.max(start,run.start),b=Math.min(end,run.end);if(b>a){const {start:_,end:__,...format}=run;runs.push({...format,text:text.slice(a,b)});}}};
+   let cursor=0;for(const match of text.matchAll(/{{\s*([^{}]+?)\s*}}/g)){append(cursor,match.index);const format=source.find(run=>run.end>match.index)||{};const {start:_,end:__,...style}=format;runs.push({...style,text:replace(match[0])});cursor=match.index+match[0].length;}append(cursor,text.length);result.runs=runs;
+  }else delete result.runs;
+  return result;
  }
  function parseBackup(text){
   if(typeof text!=='string'||text.length>12000000)throw new Error('Файл резервной копии — до 12 МБ.');
@@ -55,5 +77,5 @@
   try{for(const key of keys)storage.removeItem(key);for(const [key,value] of Object.entries(valid.storage))storage.setItem(key,JSON.stringify(value));}
   catch(error){for(const key of keys)storage.removeItem(key);for(const [key,value] of before)if(value!==null)storage.setItem(key,value);throw error;}
  }
- return {keys,types,library,parseBackup,capture,restore};
+ return {variables,applyTemplate,keys,types,library,parseBackup,capture,restore};
 });

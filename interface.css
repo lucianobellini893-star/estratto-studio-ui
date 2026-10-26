@@ -600,3 +600,22 @@ select:focus-visible { outline:2px solid #72756b; outline-offset:3px; }
 .document-hub-description { color:var(--muted); font-size:12px; line-height:1.8; }
 .document-hub-link { display:flex; width:100%; justify-content:space-between; gap:12px; margin-top:auto; padding-top:20px; border-top:1px solid var(--line); color:var(--ink-2); font-size:11px; }
 @media(max-width:1100px) { .document-hub-grid { grid-template-columns:minmax(0,1fr); gap:16px; } .document-hub-card { gap:12px; padding:24px; } }
+.templates-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(320px,.85fr); gap:24px; align-items:start; }
+.templates-layout > * { min-width:0; }
+.template-item.card { grid-template-columns:minmax(0,1fr) auto; }
+.template-create .controls { gap:18px; }
+.template-create .library-actions { flex-wrap:wrap; }
+.template-tokens { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.template-tokens button { padding:5px 9px; border:1px solid var(--line); border-radius:8px; background:#f6f6f2; color:#7d806f; font:400 10px/18px var(--sans); }
+.template-tokens button:hover { background:#ebeee2; }
+.template-dialog { width:min(640px,calc(100vw - 32px)); max-height:calc(100dvh - 48px); padding:28px; border:1px solid var(--line); border-radius:24px; color:var(--ink); background:white; box-shadow:0 12px 60px #0002; }
+.template-dialog::backdrop { background:#25252166; backdrop-filter:blur(3px); }
+.template-dialog-heading { display:flex; justify-content:space-between; align-items:center; gap:16px; }
+.template-dialog-heading h2 { margin:8px 0 0; font-size:20px; letter-spacing:-.03em; font-weight:500; overflow-wrap:anywhere; }
+.template-dialog select { width:100%; min-height:44px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:#fafaf7; color:var(--ink); font:inherit; }
+.template-result { display:flex; flex-direction:column; gap:12px; padding:20px; border:1px solid var(--line); border-radius:14px; background:#fafaf7; }
+.template-result strong { font-size:14px; font-weight:500; overflow-wrap:anywhere; }
+#template-result-text { max-height:220px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font-size:12px; line-height:1.8; }
+.history-item .library-actions { min-width:0; }
+@media(max-width:1250px) { .templates-layout { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:760px) { .template-item.card > .library-actions { grid-row:2; grid-column:1/-1; justify-content:flex-start; padding-left:60px; } .template-dialog { padding:22px; } .template-dialog .row { grid-template-columns:minmax(0,1fr); } }

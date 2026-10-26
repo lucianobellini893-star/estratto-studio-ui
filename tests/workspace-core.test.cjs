@@ -18,3 +18,23 @@ test('restoring missing sections clears only app keys and rolls back if storage 
  assert.equal(storage.getItem(core.keys[0]),'{"clientName":"Old"}');assert.equal(storage.getItem(core.keys[1]),'{}');
  core.restore(storage,{format:'estratto-studio-backup',version:1,storage:{[core.keys[2]]:{text:'Test'}}});assert.equal(storage.getItem(core.keys[0]),null);
 });
+test('old backups remain compatible and new history and templates round trip',()=>{
+ const data=library();assert.doesNotThrow(()=>core.library(data));
+ data.history=[{id:'h',name:'Client statement',type:'account',data:{clientName:'Test',cash:[],crypto:[],transactions:[]},profile:{coName:'Studio'}}];
+ data.templates=[{id:'t',name:'Letter',data:{text:'Gentile {{client_name}}'}}];
+ const backup={format:'estratto-studio-backup',version:1,storage:{'estratto-library.v1':data}};
+ assert.deepEqual(core.parseBackup(JSON.stringify(backup)).storage['estratto-library.v1'],data);
+ assert.throws(()=>core.library({...data,history:[{id:'h',name:'Broken',type:'unknown',data:{}}]}));
+});
+test('template replacement preserves selected text formatting even when token spans runs',()=>{
+ const data={title:'Messaggio da {{company}}',text:'Gentile {{client_name}}, importo {{amount}}.',runs:[{text:'Gentile '},{text:'{{client_',bold:true},{text:'name}}',italic:true},{text:', importo {{amount}}.'}]};
+ const result=core.applyTemplate(data,{client_name:'Mario Rossi',company:'Studio',amount:'1.000,00 EUR'});
+ assert.equal(result.title,'Messaggio da Studio');assert.equal(result.text,'Gentile Mario Rossi, importo 1.000,00 EUR.');
+ assert.equal(result.runs.map(run=>run.text).join(''),result.text);assert.ok(result.runs.find(run=>run.text==='Mario Rossi'&&run.bold));
+ assert.equal(data.text,'Gentile {{client_name}}, importo {{amount}}.');
+});
+test('template cannot silently export missing or unknown variables',()=>{
+ assert.throws(()=>core.applyTemplate({text:'Ciao {{client_name}}'},{client_name:''}),/client_name/);
+ assert.throws(()=>core.applyTemplate({text:'{{secret}}'},{}),/secret/);
+ assert.equal(core.applyTemplate({text:'Testo senza variabili'},{}).text,'Testo senza variabili');
+});
