@@ -191,9 +191,9 @@
        <h2 id="ac-mode-heading"><span class="step">1</span>Способ заполнения</h2>
        <div class="seg account-mode" role="group" aria-label="Способ заполнения выписки по счёту">
         <button type="button" id="ac-mode-manual" aria-pressed="true">Ручной ввод</button>
-        <button type="button" id="ac-mode-deposits" aria-pressed="false">Импорт из CRM</button>
+        <button type="button" id="ac-mode-deposits" aria-pressed="false">Автоматически / CRM</button>
        </div>
-       <p class="hint">Остатки и криптоактивы заполняются вручную. Депозиты и выводы можно добавить из скопированной истории CRM.</p>
+       <p class="hint" id="ac-mode-hint">Добавляйте операции вручную или вставьте историю в автоматическом режиме.</p>
       </section>
       <section class="card" id="ac-deposit-import" hidden aria-labelledby="ac-deposit-import-heading">
        <h2 id="ac-deposit-import-heading">Импорт операций <span class="chip">CRM</span></h2>
@@ -205,10 +205,10 @@
        <div class="msg" id="ac-deposit-error" role="status" hidden></div>
        <div id="ac-deposit-result" hidden>
         <div class="deposit-import-summary"><strong id="ac-deposit-client"></strong><span id="ac-deposit-count"></span><span id="ac-deposit-totals"></span></div>
-        <div class="tablebox"><table class="parsed" id="ac-deposit-preview" aria-label="Депозиты для импорта"></table></div>
+        <div class="tablebox"><table class="parsed" id="ac-deposit-preview" aria-label="Распознанные операции"></table></div>
         <div class="msg" id="ac-deposit-conflict" hidden><p id="ac-deposit-conflict-text"></p><button type="button" class="btn small" id="ac-deposit-use-client">Подставить имя клиента из отчёта</button></div>
-        <label class="deposit-replace"><input id="ac-deposit-replace" type="checkbox"> Заменить текущие операции вместо добавления</label>
-        <button type="button" class="btn primary" id="ac-deposit-apply" disabled>Добавить операции</button>
+        <label class="deposit-replace"><input id="ac-deposit-replace" type="checkbox"> Заменять текущую историю данными из вставки</label>
+        <button type="button" class="btn" id="ac-edit-imported">Редактировать операции вручную</button>
        </div>
        <div class="msg" id="ac-deposit-success" role="status" hidden></div>
       </section>
@@ -232,9 +232,9 @@
        <div class="account-rows" id="ac-crypto-rows"></div>
        <button type="button" class="btn small account-add" data-account-add="crypto">+ Добавить криптоактив</button>
       </section>
-      <section class="card" aria-labelledby="ac-transactions-heading">
+      <section class="card" id="ac-manual-operations" aria-labelledby="ac-transactions-heading">
        <h2 id="ac-transactions-heading"><span class="step">5</span>Операции по счёту <span class="count" id="ac-transactions-count">0</span></h2>
-       <p class="hint">Пополнения, выводы, переводы и комиссии идут отдельной таблицей «Movimenti del conto», вместо Stocks Portfolio. Пополнение — со знаком плюс, вывод и комиссия — со знаком минус. История операций не прибавляется повторно к текущим остаткам.</p>
+       <p class="hint">Добавляйте операции по одной. Пополнение — со знаком плюс, вывод или комиссия — со знаком минус.</p>
        <button type="button" class="btn small account-add" id="ac-import-deposits-link">Вставить историю из CRM</button>
        <div class="account-rows" id="ac-transactions-rows"></div>
        <button type="button" class="btn small account-add" data-account-add="transactions">+ Добавить операцию</button>

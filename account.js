@@ -23,7 +23,7 @@
   }
   const statusLabels={approved:'Подтверждено',pending:'Ожидает одобрения',failed:'Не выполнено',rejected:'Отклонено',cancelled:'Отменено'};
   const labels = { deposit:'Пополнение', withdrawal:'Вывод', transfer:'Перевод', fee:'Комиссия', result:'Торговый результат', interest:'Проценты', adjustment:'Корректировка', other:'Другое' };
-  let lastPdf = null, generation = 0, renderGeneration = 0, timer = null, attemptedDownload = false;
+  let lastPdf = null, generation = 0, renderGeneration = 0, timer = null, attemptedDownload = false, importIssue = '';
   const persist = () => { try { localStorage.setItem(storeKey, JSON.stringify(state)); } catch (_) {} };
   const node = (tag, className, text) => { const e = document.createElement(tag); if(className)e.className=className; if(text!==undefined)e.textContent=text; return e; };
   function field(group, index, key, label, options = {}) {
@@ -267,6 +267,11 @@
   window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(lastPdf&&$('page-account').classList.contains('active'))renderPreview(lastPdf).catch(()=>{});},250);});
   $('ac-download').addEventListener('click',async()=>{
     attemptedDownload=true;
+    if(importIssue){
+      const source=$('ac-deposit-source');source.setAttribute('aria-invalid','true');
+      $('ac-deposit-error').textContent=importIssue;$('ac-deposit-error').hidden=false;
+      source.scrollIntoView({block:'center',behavior:'instant'});source.focus({preventScroll:true});return;
+    }
     const checked=core.validate(state); showValidation(checked,true);
     if(checked.issues.length)return;
     clearTimeout(timer);
@@ -284,6 +289,7 @@
   });
   window.EstrattoAccountForm={
     get:()=>JSON.parse(JSON.stringify(state)),
+    setImportIssue:message=>{importIssue=String(message||'');},
     setClient:name=>{state.clientName=name;$('ac-client-name').value=name;persist();invalidate();},
     importOperations:(rows,replace=false)=>{
       const client=rows[0]?.sourceClient||'';

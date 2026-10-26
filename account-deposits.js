@@ -19,11 +19,17 @@
     const type=options.type||'deposit';
     if(!['deposit','withdrawal'].includes(type))throw new Error('Выберите пополнения или выводы.');
     if(String(text).length>1000000)throw new Error('Вставьте отчёт размером до 1 МБ.');
-    const lines=String(text||'').replace(/^\uFEFF/,'').replace(/\r/g,'').split('\n').map(line=>line.trim()).filter(Boolean);
+    const lines=String(text||'').replace(/&(?:nbsp|#160|#x0*a0|#32|#x0*20);/gi,' ').replace(/[\uFEFF\u200B\u200C\u200D]/g,'').replace(/\r/g,'').split('\n').map(line=>line.trim()).filter(Boolean);
     if(!lines.length)throw new Error('Вставьте историю депозитов вместе с заголовками.');
     const records=[];
     const tabHeader=lines.findIndex(line=>line.includes('\t')&&line.split('\t').map(header).includes('destcurrency')&&line.split('\t').map(header).includes('created'));
-    if(tabHeader>=0){
+    const tableColumns=tabHeader>=0?lines[tabHeader].split('\t').map(header):[];
+    const structured=tabHeader>=0&&lines.slice(tabHeader+1).every(line=>{
+      const cells=line.split('\t');
+      if(cells.length===tableColumns.length+1&&/^(sd|edit|view)$/i.test(cells[1]))cells.splice(1,1);
+      return /^\d+$/.test(cells[tableColumns.indexOf('id')]||'')&&/^\d{4}-\d{2}-\d{2}[ T]/.test(cells[tableColumns.indexOf('created')]||'');
+    });
+    if(structured){
       const columns=lines[tabHeader].split('\t').map(header),idx=key=>columns.indexOf(key);
       for(const key of ['id','destcurrency','destamount','orderstatus','tradingusers','created'])if(idx(key)<0)throw new Error('Не найдена колонка '+key+'.');
       for(const line of lines.slice(tabHeader+1)){
@@ -33,6 +39,8 @@
         records.push({id:get('id'),unit:get('destcurrency'),amount:get('destamount'),method:get('ordermethod'),status:get('orderstatus'),client:get('tradingusers'),created:get('created')});
       }
     } else {
+      const flat=lines.flatMap(line=>line.split('\t')).map(line=>line.trim()).filter(Boolean);
+      lines.splice(0,lines.length,...flat);
       const starts=[];
       const action=value=>/^(sd|edit|view)$/i.test(value||'');
       const currencyIndex=start=>action(lines[start+1])?start+2:start+1;

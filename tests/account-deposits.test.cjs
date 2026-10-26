@@ -67,3 +67,16 @@ test('a changed status updates the existing imported request without dropping ot
  assert.equal(result.added,0);assert.equal(result.updated,1);assert.equal(result.transactions.length,2);
  assert.equal(result.transactions[0].status,'approved');assert.deepEqual(result.transactions[1],other);
 });
+test('vertical headers with tab-separated data and sd cells parse like the original vertical copy',()=>{
+ const text=headings+'\n'+['100001','sd','Euro','1000','Bank account','','Approved','TEST CLIENT','test-brand','2026-07-29 11:52:15',''].join('\t');
+ const result=deposits.parse(text);assert.equal(result.transactions.length,1);assert.equal(result.transactions[0].amount,'1000');assert.equal(result.clientName,'TEST CLIENT');
+});
+test('tab-separated headers with vertically copied data fall back without shifting fields',()=>{
+ const text=headings.replace(/\n/g,'\t')+'\n'+record('100001');
+ const result=deposits.parse(text);assert.equal(result.transactions.length,1);assert.equal(result.transactions[0].reference,'100001');
+});
+test('line breaks inside payment requisites do not break a copied TSV withdrawal',()=>{
+ const header='ID\tDest currency\tDest amount\tNetwork\tOrder method\tPayment Requisites\tOrder status\tTrading users\tBrand\tCreated\tLast note';
+ const row='200001\tsd\tEuro\t170\t\tBank account\tBank address: Sample\nView all\tApproved\tTEST CLIENT\ttest-brand\t2026-07-23 16:37:47\t';
+ const result=deposits.parse(header+'\n'+row,{type:'withdrawal'});assert.equal(result.transactions.length,1);assert.equal(result.transactions[0].amount,'-170');assert.equal(result.clientName,'TEST CLIENT');
+});
