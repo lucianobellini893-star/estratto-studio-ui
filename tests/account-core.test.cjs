@@ -45,3 +45,14 @@ test('empty account cannot become a zero balance by accident; explicitly entered
  assert.ok(core.validate(state({cash:[]})).errors.length);
  const result=core.validate(state({cash:[asset({quantity:'0'})]}));assert.deepEqual(result.errors,[]);assert.equal(result.total,0n);
 });
+test('empty form previews a marked draft without invented zero account balances',()=>{
+ const result=core.preview(state({clientName:'',clientId:'',accountId:'',cash:[]}));
+ assert.equal(result.draft,true);assert.equal(result.total,null);assert.equal(result.cashTotal,null);assert.equal(result.cryptoTotal,null);assert.ok(result.errors.length);
+});
+test('invalid numeric input remains unknown in a draft instead of being silently dropped',()=>{
+ const result=core.preview(state({cash:[asset(),asset({quantity:'invalid'})]}));
+ assert.equal(result.draft,true);assert.equal(result.cash.length,2);assert.equal(result.cash[1].quantity,'—');assert.equal(result.cash[1].value,null);assert.equal(result.total,null);
+});
+test('completed form produces a final model instead of a draft',()=>{
+ const result=core.preview(state());assert.equal(result.draft,false);assert.deepEqual(result.errors,[]);assert.equal(result.total,22940n);
+});

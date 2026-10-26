@@ -136,7 +136,8 @@
         </div>
       </section>
 
-      <section class="card" aria-labelledby="h-logo">
+      <div id="trade-logo-slot">
+      <section class="card" id="shared-logo-editor" aria-labelledby="h-logo">
         <h2 id="h-logo"><span class="step">5</span>Логотип</h2>
         <div class="logo-stage" id="logo-stage"><span class="empty">Логотип не загружен</span></div>
         <div class="tool-row">
@@ -159,6 +160,7 @@
         <div class="msg err" id="logo-msg" hidden></div>
       </section>
 
+      </div>
       <details class="card" id="texts">
         <summary>Тексты внизу страницы</summary>
         <label class="f" for="disc-a">Для открытых сделок
@@ -228,8 +230,9 @@
        <label class="f">Адрес компании<textarea id="ac-co-addr" data-profile-field="co-addr" rows="2"></textarea></label>
        <label class="f">Сайт для QR-кода<input id="ac-co-site" data-profile-field="co-site" type="text" autocomplete="off"></label>
        <p class="hint">Компания, сайт и логотип общие для обоих видов выписок. Цвета и шрифты PDF сохранены.</p>
-       <div class="tool-row"><span class="chip" id="ac-logo-status"></span><button type="button" class="btn small" data-page="editor">Настроить логотип</button></div>
+       <div class="tool-row"><span class="chip" id="ac-logo-status"></span></div>
       </section>
+      <div id="account-logo-slot"></div>
      </div>
      <aside class="preview" aria-label="Предпросмотр выписки по торговому счёту">
       <div class="account-summary">
@@ -238,10 +241,10 @@
        <div class="metric-detail"><span>Денежные средства</span><strong id="ac-cash-total">—</strong></div>
        <div class="metric-detail"><span>Криптоактивы</span><strong id="ac-crypto-total">—</strong></div>
       </div>
-      <div class="pv-bar"><span class="t">Выписка по торговому счёту</span><span class="s" id="ac-pv-status" role="status">Заполните данные</span><button type="button" class="btn primary" id="ac-download" disabled>Скачать PDF</button></div>
+      <div class="pv-bar"><span class="t">Выписка по торговому счёту</span><span class="s" id="ac-pv-status" role="status">Готовлю предпросмотр…</span><button type="button" class="btn primary" id="ac-download" disabled>Скачать черновик</button></div>
       <div class="msg" id="ac-validation" aria-live="polite"></div>
       <div class="msg" id="ac-download-message" role="status" hidden></div>
-      <div class="stage" id="ac-stage"><div class="account-preview-empty"><span class="micro-label">ПРЕДПРОСМОТР PDF</span><p>Заполните клиента и добавьте остатки — здесь появится готовая выписка.</p></div></div>
+      <div class="stage" id="ac-stage"><div class="account-preview-empty"><span class="micro-label">ПРЕДПРОСМОТР PDF</span><p>Готовлю предпросмотр выписки…</p></div></div>
      </aside>
     </div>
    </section>
@@ -850,6 +853,10 @@ async function buildPdf(data, renderContent) {
     doc.setPage(p);
     if (p === 1) headerFirst(); else headerNext();
     footer(p, pages);
+    if (data.draft) {
+      f("InterSB", 8, C.RED);
+      doc.text("BOZZA · DATI INCOMPLETI", RIGHT, LOGO_TOP + 18, { align: "right" });
+    }
   }
   doc.setProperties({
     title: data.referenceDate ? `Estratto conto di trading ${data.referenceDate}` : `Estratto operazioni ${mode} ${data.from} - ${data.to}`,
@@ -1304,7 +1311,7 @@ $("download").addEventListener("click", async () => {
 let rt = null;
 window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { drawSelection(); if (lastPdf) renderPreview(lastPdf.bytes, buildSeq); }, 250); });
 
-window.EstrattoDocument = { buildPdf, collectProfile: collect };
+window.EstrattoDocument = { buildPdf, collectProfile: collect, relayoutLogo: drawSelection };
 
 /* boot */
 (async () => {

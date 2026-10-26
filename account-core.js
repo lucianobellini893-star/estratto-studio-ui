@@ -98,5 +98,31 @@
     return { errors, clientName, clientId, accountId, date: state.date, currency, ...assets, transactions,
       cashTotal: total('cash'), cryptoTotal: total('crypto'), total: total('cash') + total('crypto') };
   }
-  return { decimal, toMoney, productMoney, money, validDate, validate, types };
+  // Incomplete forms can be previewed and downloaded only as an explicit draft.
+  // Missing or invalid numbers remain unknown, rather than becoming zero.
+  function preview(state) {
+    const model = validate(state);
+    if (!model.errors.length) return { ...model, draft: false };
+    const text = (value, max = 80) => String(value || '').trim().slice(0, max) || '—';
+    const asset = row => {
+      let quantity, price, value = null;
+      try { quantity = decimal(row.quantity); } catch (_) {}
+      try { price = decimal(row.price); if (price.units < 0n) price = undefined; } catch (_) {}
+      if (quantity && price) value = productMoney(quantity, price);
+      return { asset:text(row.asset), symbol:text(row.symbol,16), wallet:text(row.wallet,40),
+        quantity:quantity ? quantity.text : '—', price:price ? price.text : '—', value };
+    };
+    const cash = (state.cash || []).map(asset), crypto = (state.crypto || []).map(asset);
+    const sum = rows => rows.some(row => row.value === null) ? null : rows.reduce((total,row) => total + row.value,0n);
+    const cashTotal = cash.length || crypto.length ? sum(cash) : null, cryptoTotal = cash.length || crypto.length ? sum(crypto) : null;
+    const total = !cash.length && !crypto.length || cashTotal === null || cryptoTotal === null ? null : cashTotal + cryptoTotal;
+    const transactions = (state.transactions || []).map(row => {
+      let amount = null;
+      try { amount = toMoney(decimal(row.amount)); } catch (_) {}
+      return { date:validDate(row.date || '') ? row.date : '', type:row.type, description:text(row.description,300),
+        amount, currency:text(row.currency,10).toUpperCase(), reference:text(row.reference,80) };
+    });
+    return { ...model, cash, crypto, transactions, cashTotal, cryptoTotal, total, draft:true };
+  }
+  return { decimal, toMoney, productMoney, money, validDate, validate, preview, types };
 });

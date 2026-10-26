@@ -75,20 +75,18 @@
   function invalidate() {
     clearTimeout(timer); generation++; renderGeneration++; lastPdf=null; $('ac-download').disabled=true;
     $('ac-download-message').hidden=true;
-    const model=core.validate(state); updateSummary(model);
+    const checked=core.validate(state), model=core.preview(state); updateSummary(checked);
     const box=$('ac-validation'); box.replaceChildren(); box.hidden=!model.errors.length;
     if (model.errors.length) {
-      box.append(node('strong','','Для PDF осталось заполнить:'));
+      box.append(node('strong','','Показан черновик. Для готовой выписки исправьте:'));
       const list=node('ul'); model.errors.slice(0,6).forEach(message=>list.append(node('li','',message)));box.append(list);
       if(model.errors.length>6)box.append(node('p','',`И ещё ${model.errors.length-6} полей.`));
-      $('ac-pv-status').textContent='Проверьте данные';
-      const placeholder=node('div','account-preview-empty'); placeholder.append(node('span','micro-label','ПРЕДПРОСМОТР PDF'),node('p','','Заполните обязательные поля — предпросмотр обновится автоматически.'));
-      $('ac-stage').replaceChildren(placeholder);$('ac-stage').removeAttribute('aria-busy');
-    } else {
-      $('ac-pv-status').textContent='Обновляю PDF…';$('ac-stage').setAttribute('aria-busy','true');
-      const seq=generation;timer=setTimeout(()=>build(model,seq),300);
     }
+    $('ac-download').textContent=model.draft?'Скачать черновик':'Скачать PDF';
+    $('ac-pv-status').textContent='Обновляю PDF…';$('ac-stage').setAttribute('aria-busy','true');
+    const seq=generation;timer=setTimeout(()=>build(model,seq),300);
   }
+
   function drawContent(model) {
     return ({doc,f,C,W,H,MX,RIGHT,PT,PAD,ROW_H,HEAD_H,FRAME_FIRST,FRAME_NEXT,FRAME_BOTTOM}) => {
       let y=FRAME_FIRST;
@@ -117,40 +115,48 @@
           doc.setDrawColor(C.LINE);doc.setLineWidth(.4*PT);doc.line(MX,y+height,RIGHT,y+height);
           let x=MX;
           lines.forEach((cell,i)=>{
-            f('InterR',8.3,row.amountIndex===i?(row.amount>0n?C.GREEN:C.RED):C.BLACK);
+            f('InterR',8.3,row.amountIndex===i?(row.amount===null?C.GRAY:row.amount>0n?C.GREEN:C.RED):C.BLACK);
             cell.forEach((text,j)=>doc.text(text,columns[i].right?x+columns[i].width-PAD:x+PAD,y+4.9+j*lineHeight,{align:columns[i].right?'right':'left'}));x+=columns[i].width;
           });y+=height;
         });
-        if(total!==undefined){ensure(9);f('InterSB',9,C.BLACK);doc.text('Totale',MX+PAD,y+6);doc.text(core.money(total)+' '+model.currency,RIGHT-PAD,y+6,{align:'right'});y+=9;}
+        if(total!==undefined){ensure(9);f('InterSB',9,C.BLACK);doc.text('Totale',MX+PAD,y+6);doc.text((total===null?'—':core.money(total))+' '+(model.currency||'—'),RIGHT-PAD,y+6,{align:'right'});y+=9;}
         y+=6;
       }
       const assetColumns=[['ATTIVITÀ',62],['SIMBOLO',26],['PORTAFOGLIO',40],['QUANTITÀ',42,true],[`PREZZO (${model.currency})`,45,true],[`VALORE (${model.currency})`,50,true]].map(([label,width,right])=>({label,width,right}));
-      const assetRows=rows=>rows.map(r=>({cells:[r.asset,r.symbol,r.wallet,r.quantity,r.price,core.money(r.value)]}));
+      const assetRows=rows=>rows.map(r=>({cells:[r.asset,r.symbol,r.wallet,r.quantity,r.price,r.value===null?'—':core.money(r.value)]}));
       table('Disponibilità liquide',assetColumns,assetRows(model.cash),model.cashTotal,'Disponibilità liquide non indicate.');
       table('Criptoattività',assetColumns,assetRows(model.crypto),model.cryptoTotal,'Criptoattività non indicate.');
-      ensure(14);f('InterSB',11,C.BLACK);doc.text('Saldo complessivo del conto',MX,y+5);doc.text(core.money(model.total)+' '+model.currency,RIGHT,y+5,{align:'right'});y+=14;
+      ensure(14);f('InterSB',11,C.BLACK);doc.text('Saldo complessivo del conto',MX,y+5);doc.text((model.total===null?'—':core.money(model.total))+' '+(model.currency||'—'),RIGHT,y+5,{align:'right'});y+=14;
       const txColumns=[['DATA',28],['OPERAZIONE',42],['DESCRIZIONE',76],['IMPORTO',40,true],['VALUTA',22],['RIFERIMENTO',57]].map(([label,width,right])=>({label,width,right}));
-      const date=value=>value.split('-').reverse().join('/');
-      table('Movimenti del conto',txColumns,model.transactions.map(r=>({cells:[date(r.date),core.types[r.type],r.description||'—',core.money(r.amount,true),r.currency,r.reference||'—'],amount:r.amount,amountIndex:3})),undefined,'Dati sui movimenti non forniti.');
+      const date=value=>value?value.split('-').reverse().join('/'):'—';
+      table('Movimenti del conto',txColumns,model.transactions.map(r=>({cells:[date(r.date),core.types[r.type]||'—',r.description||'—',r.amount===null?'—':core.money(r.amount,true),r.currency,r.reference||'—'],amount:r.amount,amountIndex:3})),undefined,'Dati sui movimenti non forniti.');
 
     };
   }
   async function build(model,seq) {
     try {
       const profile=shared.collectProfile();
-      const data={...profile,mode:'conto',trades:[],clientName:model.clientName,clientId:model.clientId,accountId:model.accountId,
-        referenceDate:model.date.split('-').reverse().join('/'),toIso:model.date,
+      const data={...profile,mode:'conto',trades:[],clientName:model.clientName||'—',clientId:model.clientId||'—',accountId:model.accountId||'—',draft:model.draft,
+        referenceDate:core.validDate(model.date||'')?model.date.split('-').reverse().join('/'):'—',toIso:model.date,
         disclaimer:'Il presente documento riepiloga le disponibilità e i movimenti del conto alla data indicata, sulla base dei dati forniti. La valorizzazione degli attivi è espressa nella valuta di riferimento. I movimenti mantengono la propria valuta e non vengono sommati nuovamente al saldo. Documento riservato al cliente; non costituisce consulenza finanziaria.'};
       const result=await shared.buildPdf(data,drawContent(model));
       if(seq!==generation)return;
       lastPdf={bytes:result.bytes,pages:result.pages,model};$('ac-download').disabled=false;
-      $('ac-pv-status').textContent=`${result.pages} ${result.pages===1?'страница':'стр.'} · ${model.transactions.length} операций`;
-      if($('page-account').classList.contains('active'))await renderPreview(lastPdf);
+      $('ac-pv-status').textContent=`${model.draft?'Черновик · ':''}${result.pages} ${result.pages===1?'страница':'стр.'} · ${model.transactions.length} операций`;
+      if($('page-account').classList.contains('active')) {
+        try { await renderPreview(lastPdf); }
+        catch(e) { if(seq===generation)previewError(e); }
+      }
     } catch(e) {
       if(seq!==generation)return;
       lastPdf=null;$('ac-download').disabled=true;$('ac-pv-status').textContent='Не удалось собрать PDF';
       $('ac-validation').hidden=false;$('ac-validation').textContent='PDF не собран: '+e.message;
     } finally { if(seq===generation)$('ac-stage').removeAttribute('aria-busy'); }
+  }
+  function previewError(error) {
+    const message=node('div','msg','PDF сформирован и доступен для скачивания. Не удалось показать предпросмотр: '+error.message);
+    $('ac-stage').replaceChildren(message);
+    $('ac-pv-status').textContent='PDF готов; предпросмотр недоступен';
   }
   async function renderPreview(pdf) {
     const seq=++renderGeneration, stage=$('ac-stage');
@@ -197,17 +203,27 @@
     $('ac-logo-status').textContent=shared.collectProfile().logo?'Используется ваш логотип':'Логотип пока не загружен';
   }
   document.addEventListener('estratto:profilechange',()=>{syncProfile();invalidate();});
-  document.addEventListener('estratto:navigate',event=>{if(event.detail==='account'&&lastPdf)renderPreview(lastPdf).catch(e=>{$('ac-pv-status').textContent='PDF готов; предпросмотр недоступен';});});
+  function moveLogo(page) {
+    const account=page==='account', slot=$(account?'account-logo-slot':'trade-logo-slot');
+    slot.append($('shared-logo-editor'));
+    $('h-logo').querySelector('.step').textContent=account?'7':'5';
+    shared.relayoutLogo();
+  }
+  document.addEventListener('estratto:navigate',event=>{
+    moveLogo(event.detail);
+    if(event.detail==='account'&&lastPdf)renderPreview(lastPdf).catch(previewError);
+  });
   let resizeTimer;
   window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(lastPdf&&$('page-account').classList.contains('active'))renderPreview(lastPdf).catch(()=>{});},250);});
   $('ac-download').addEventListener('click',()=>{
     if(!lastPdf)return;
     const slug=lastPdf.model.accountId.replace(/[^A-Za-z0-9]+/g,'_')||'account';
     const url=URL.createObjectURL(new Blob([lastPdf.bytes],{type:'application/pdf'})),link=node('a');
-    link.href=url;link.download=`estratto_conto_${slug}_${lastPdf.model.date.replace(/-/g,'')}.pdf`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
-    $('ac-download-message').textContent='PDF скачан.';$('ac-download-message').hidden=false;
+    link.href=url;link.download=`${lastPdf.model.draft?'bozza_':''}estratto_conto_${slug}_${(lastPdf.model.date||'').replace(/-/g,'')}.pdf`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
+    $('ac-download-message').textContent=lastPdf.model.draft?'Черновик PDF скачан. Документ содержит пометку BOZZA — данные ещё не заполнены полностью.':'PDF скачан.';$('ac-download-message').hidden=false;
   });
   for(const input of document.querySelectorAll('[data-account-field]'))input.value=state[input.dataset.accountField]||'';
   for(const group of ['cash','crypto','transactions'])renderRows(group);
+  moveLogo($('page-account').classList.contains('active')?'account':'editor');
   syncProfile();invalidate();
 })();
