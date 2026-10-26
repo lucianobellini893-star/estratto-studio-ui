@@ -669,23 +669,33 @@ async function buildPdf(data, renderContent) {
   // Account identifiers have their own measured block; long names and company
   // addresses wrap without moving the divider or colliding with the table.
   function accountHeaderLayout() {
-    const leftWidth = 96, clientX = MX + 116, balanceWidth = 66;
-    const clientWidth = RIGHT - clientX - (data.accountBalance ? balanceWidth + 12 : 0);
     const lines = (text, font, size, width, color) => {
       f(font, size, color);
       return doc.splitTextToSize(String(text || ""), width).map(text => ({ text, font, size, color }));
     };
+    const measuredWidth = block => Math.max(0, ...block.map(line => {
+      f(line.font, line.size, line.color); return tw(line.text);
+    }));
+    const gap = 8;
     const left = [
-      ...lines(data.coName, "InterM", 11.5, leftWidth, C.BLACK),
-      ...data.coAddr.flatMap(line => lines(line, "InterR", 8.5, leftWidth, C.GRAY))
+      ...lines(data.coName, "InterM", 11.5, 92, C.BLACK),
+      ...data.coAddr.flatMap(line => lines(line, "InterR", 8.5, 92, C.GRAY))
     ];
+    const firstDivider = MX + measuredWidth(left) + gap;
+    const clientX = firstDivider + gap;
     const right = [
-      ...lines(data.clientName, "InterM", 11.5, clientWidth, C.BLACK),
-      ...lines(`ID conto  ${data.accountId}`, "InterR", 8.5, clientWidth, C.GRAY)
+      ...lines(data.clientName, "InterM", 11.5, 70, C.BLACK),
+      ...lines(`ID conto  ${data.accountId}`, "InterR", 8.5, 70, C.GRAY)
     ];
-    const bottom = TOP_Y + 14 + 7 + (Math.max(left.length, right.length) - 1) * ROW_STEP;
+    const secondDivider = clientX + measuredWidth(right) + gap;
+    const balanceX = secondDivider + gap;
+    const balance = data.accountBalance ? [
+      ...lines("Saldo del conto", "InterM", 11.5, RIGHT - balanceX, C.BLACK),
+      ...lines(data.accountBalance, "InterR", 8.5, RIGHT - balanceX, C.GRAY)
+    ] : [];
+    const bottom = TOP_Y + 14 + 7 + (Math.max(left.length, right.length, balance.length) - 1) * ROW_STEP;
     if (bottom > 100) throw new Error("Сократите реквизиты компании: заголовок занимает слишком много места.");
-    return { left, right, clientX, bottom, contentTop: Math.max(FRAME_FIRST, bottom + 7) };
+    return { left, right, balance, clientX, balanceX, firstDivider, secondDivider, bottom, contentTop: Math.max(FRAME_FIRST, bottom + 7) };
   }
   const accountHeader = data.accountId ? accountHeaderLayout() : null;
   function headerFirst() {
@@ -695,17 +705,11 @@ async function buildPdf(data, renderContent) {
         f(line.font, line.size, line.color); doc.text(line.text, x, TOP_Y + 14 + 7 + i * ROW_STEP);
       });
       paintLines(accountHeader.left, MX); paintLines(accountHeader.right, accountHeader.clientX);
-      if (data.accountBalance) {
-        const top = TOP_Y + 14 + 7;
-        f("InterR", 7.5, C.GRAY);
-        doc.text("SALDO DEL CONTO", RIGHT, top, { align: "right" });
-        let size = 12.5;
-        f("InterSB", size, C.BLACK);
-        while (tw(data.accountBalance) > 66 && size > 8) { size -= 0.5; f("InterSB", size, C.BLACK); }
-        doc.text(data.accountBalance, RIGHT, top + 6, { align: "right" });
-      }
+      paintLines(accountHeader.balance, accountHeader.balanceX);
       doc.setDrawColor(C.LIGHT); doc.setLineWidth(0.5 * PT);
-      doc.line(MX + 100, TOP_Y + 14 + 3, MX + 100, accountHeader.bottom + 2);
+      const dividerTop = TOP_Y + 14 + 3, dividerBottom = accountHeader.bottom + 2;
+      doc.line(accountHeader.firstDivider, dividerTop, accountHeader.firstDivider, dividerBottom);
+      if (accountHeader.balance.length) doc.line(accountHeader.secondDivider, dividerTop, accountHeader.secondDivider, dividerBottom);
       return;
     }
 
