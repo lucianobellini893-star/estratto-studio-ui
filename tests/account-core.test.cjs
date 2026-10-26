@@ -70,3 +70,19 @@ test('validation identifies the precise invalid transaction field and both dupli
  const result=core.validate(state({transactions:[row,{...row,amount:'2'}]}));
  for(const path of ['transactions.1.amount','transactions.0.reference','transactions.1.reference'])assert.ok(result.issues.some(issue=>issue.path===path),path);
 });
+const catalog=require('../account-assets.js');
+test('asset search matches Russian names, English names and symbols in the correct category',()=>{
+ for(const query of ['эфир','Ethereum','eth'])assert.equal(catalog.search('crypto',query)[0].symbol,'ETH');
+ assert.equal(catalog.search('cash','евро')[0].symbol,'EUR');
+ assert.equal(catalog.search('cash','ETH').length,0);
+ assert.equal(catalog.search('crypto','EUR').length,0);
+ assert.equal(catalog.search('cash','несуществующий актив').length,0);
+});
+test('known asset and symbol mismatches are identified without altering the amounts',()=>{
+ const result=core.validate(state({cash:[asset({symbol:'ETH'})]}));
+ assert.ok(result.issues.some(issue=>issue.path==='cash.0.symbol'&&issue.message.includes('EUR')));
+});
+test('custom assets remain valid without an external listing or price service',()=>{
+ const result=core.validate(state({cash:[],crypto:[asset({asset:'My Custom Token',symbol:'MCT',quantity:'2',price:'3'})]}));
+ assert.deepEqual(result.errors,[]);assert.equal(result.total,60000n);
+});

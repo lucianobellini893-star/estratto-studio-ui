@@ -1,7 +1,7 @@
 /* Manual trading-account workflow. The trade statement keeps its own data. */
 (() => {
   'use strict';
-  const core = window.EstrattoAccount, shared = window.EstrattoDocument;
+  const core = window.EstrattoAccount, shared = window.EstrattoDocument, catalog = window.EstrattoAssets, picker = window.EstrattoPicker;
   const $ = id => document.getElementById(id);
   const storeKey = 'estratto-conto.v1';
   const now = new Date();
@@ -15,6 +15,11 @@
   for (const group of ['cash','crypto','transactions']) {
     if (!Array.isArray(state[group])) state[group] = [];
     state[group] = state[group].filter(row => row && typeof row === 'object').slice(0,1000);
+  }
+  // Correct the specific legacy Euro/ETH mismatch without changing amounts or FX rates.
+  let repairedSymbol=false;
+  for(const row of state.cash)if(catalog.findByName('cash',row.asset)?.symbol==='EUR'&&String(row.symbol||'').trim().toUpperCase()==='ETH'){
+    row.symbol='EUR';repairedSymbol=true;
   }
   const labels = { deposit:'Пополнение', withdrawal:'Вывод', transfer:'Перевод', fee:'Комиссия', result:'Торговый результат', interest:'Проценты', adjustment:'Корректировка', other:'Другое' };
   let lastPdf = null, generation = 0, renderGeneration = 0, timer = null, attemptedDownload = false;
@@ -32,9 +37,28 @@
     if (options.max) input.maxLength = options.max;
     if (options.textarea) { input.rows=2; input.maxLength=300; }
     input.value = state[group][index][key] || '';
-    wrapper.append(input); return wrapper;
+    wrapper.append(input);
+    if(['asset','symbol','wallet','currency'].includes(key))attachPicker(input,group,index,key);
+    return wrapper;
+  }
+  function attachPicker(input,group,index,key) {
+    const pair=key==='asset'||key==='symbol';
+    const searchGroup=pair?group:key==='wallet'?'wallets':group==='transactions'?'all':'currency';
+    const heading=pair?(group==='crypto'?'Криптовалюты · название и символ':'Денежные валюты · название и символ'):key==='wallet'?'Тип портфеля / кошелька':'Валюта операции';
+    picker.attach(input,{group:searchGroup,title:heading,onSelect:item=>{
+      if(pair){
+        const row=state[group][index],previousAsset=catalog.findByName(group,row.asset);
+        const changed=String(row.symbol||'').trim().toUpperCase()!==item.symbol || previousAsset?.symbol!==item.symbol;
+        row.asset=item.name;row.symbol=item.symbol;
+        $(`ac-${group}-${index}-asset`).value=item.name;$(`ac-${group}-${index}-symbol`).value=item.symbol;
+        if(changed){row.price=group==='cash'&&item.symbol===state.currency.trim().toUpperCase()?'1':'';$(`ac-${group}-${index}-price`).value=row.price;}
+      } else state[group][index][key]=key==='wallet'?item.name:item.symbol;
+      if(!pair)input.value=state[group][index][key];
+      persist();invalidate();
+    }});
   }
   function renderRows(group) {
+    picker.close();
     const container = $(`ac-${group}-rows`); container.replaceChildren();
     if (!state[group].length) {
       container.append(node('p','account-empty',group==='transactions' ? 'Операции пока не добавлены. Без них PDF будет содержать пометку «Данные об операциях не предоставлены».' : 'Остатки пока не добавлены.'));
@@ -51,7 +75,7 @@
         row2.append(field(group,index,'amount','Сумма (+ / −)',{number:true,placeholder:'+100.00 или −25.00'}),field(group,index,'currency','Валюта',{max:10,placeholder:'USD'}));
         article.append(row1,row2,field(group,index,'description','Описание',{textarea:true}),field(group,index,'reference','ID / Референс (необязательно)',{max:80}));
       } else {
-        row1.append(field(group,index,'asset','Название актива',{max:80,placeholder:group==='cash'?'Euro':'Ethereum'}),field(group,index,'symbol','Символ',{max:16,placeholder:group==='cash'?'EUR':'ETH'}));
+        row1.append(field(group,index,'asset',group==='crypto'?'Название криптовалюты':'Название валюты',{max:80,placeholder:group==='cash'?'Euro':'Ethereum'}),field(group,index,'symbol',group==='crypto'?'Символ криптовалюты':'Код валюты',{max:16,placeholder:group==='cash'?'EUR':'ETH'}));
         row2.append(field(group,index,'quantity','Количество',{number:true,placeholder:'0.0000'}),field(group,index,'price',`Цена (${state.currency || 'USD'})`,{number:true,placeholder:'0.0000'}));
         article.append(row1,field(group,index,'wallet','Кошелёк / Портфель',{max:40,placeholder:'Spot'}),row2);
         const total=node('div','account-row-total'); total.append(node('span','','Стоимость'));
@@ -156,7 +180,7 @@
     try {
       const profile=shared.collectProfile();
       const data={...profile,mode:'conto',trades:[],clientName:model.clientName||'—',clientId:model.clientId||'—',accountId:model.accountId||'—',
-        accountBalance:(model.total===null?'—':core.money(model.total))+' '+(model.currency||'—'),
+        accountBalance:(model.total===null?'—':core.money(model.total))+' '+(model.currency||'—'),accountCurrency:model.currency||'—',
         referenceDate:core.validDate(model.date||'')?model.date.split('-').reverse().join('/'):'—',toIso:model.date,
         disclaimer:'Il presente documento riepiloga le disponibilità e i movimenti del conto alla data indicata, sulla base dei dati forniti. La valorizzazione degli attivi è espressa nella valuta di riferimento. I movimenti mantengono la propria valuta e non vengono sommati nuovamente al saldo. Documento riservato al cliente; non costituisce consulenza finanziaria.'};
       const result=await shared.buildPdf(data,drawContent(model));
@@ -253,6 +277,10 @@
     } finally { $('ac-download').disabled=false; }
   });
   for(const input of document.querySelectorAll('[data-account-field]'))input.value=state[input.dataset.accountField]||'';
+  picker.attach($('ac-currency'),{group:'currency',title:'Валюта оценки счёта',onSelect:item=>{
+    $('ac-currency').value=item.symbol;$('ac-currency').dispatchEvent(new Event('input',{bubbles:true}));
+  }});
+  if(repairedSymbol)persist();
   for(const group of ['cash','crypto','transactions'])renderRows(group);
   moveLogo($('page-account').classList.contains('active')?'account':'editor');
   syncProfile();invalidate();

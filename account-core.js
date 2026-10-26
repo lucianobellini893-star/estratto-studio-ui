@@ -1,9 +1,9 @@
 /* Exact decimal arithmetic and validation for manually entered account statements. */
 (function (root, factory) {
-  const api = factory();
+  const api = factory(typeof module === 'object' && module.exports ? require('./account-assets.js') : root.EstrattoAssets);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.EstrattoAccount = api;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (catalog) {
   'use strict';
   const pow = n => 10n ** BigInt(n);
   function decimal(value, label = 'Число') {
@@ -67,6 +67,9 @@
         const asset = required(row.asset, 'Название актива', 80, path('asset'));
         const symbol = required(row.symbol, 'Символ', 16, path('symbol')).toUpperCase();
         const wallet = required(row.wallet, 'Кошелёк / Портфель', 40, path('wallet'));
+        const known = catalog.findByName(group,asset);
+        if (known && symbol && symbol !== known.symbol) add(path('symbol'), `Для ${known.name} используйте символ ${known.symbol}. Выберите актив из списка.`);
+        if (!known && symbol && catalog.findBySymbol(group==='cash'?'crypto':'cash',symbol)) add(path('symbol'), group==='cash'?'Криптовалюту добавьте в раздел «Криптоактивы».':'Денежную валюту добавьте в раздел «Денежные средства».');
         let quantity, price;
         try { quantity = decimal(row.quantity, 'Количество'); } catch (e) { add(path('quantity'), e.message); }
         try {

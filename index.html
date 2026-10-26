@@ -691,7 +691,8 @@ async function buildPdf(data, renderContent) {
     const balanceX = secondDivider + gap;
     const balance = data.accountBalance ? [
       ...lines("Saldo del conto", "InterM", 11.5, RIGHT - balanceX, C.BLACK),
-      ...lines(data.accountBalance, "InterR", 8.5, RIGHT - balanceX, C.GRAY)
+      ...lines(data.accountBalance, "InterR", 8.5, RIGHT - balanceX, C.GRAY),
+      ...lines(`Valuta di riferimento: ${data.accountCurrency}`, "InterR", 7.5, RIGHT - balanceX, C.GRAY)
     ] : [];
     const bottom = TOP_Y + 14 + 7 + (Math.max(left.length, right.length, balance.length) - 1) * ROW_STEP;
     if (bottom > 100) throw new Error("Сократите реквизиты компании: заголовок занимает слишком много места.");
@@ -1359,7 +1360,9 @@ window.EstrattoDocument = { buildPdf, collectProfile: collect, relayoutLogo: dra
   if(['#editor','#account'].includes(location.hash))navigate(location.hash.slice(1));
 })();
 </script>
+<script src="account-assets.js"></script>
 <script src="account-core.js"></script>
+<script src="account-picker.js"></script>
 <script src="account.js"></script>
 </body>
 </html>
