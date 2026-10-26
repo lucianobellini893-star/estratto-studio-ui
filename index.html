@@ -25,7 +25,7 @@
    <div class="nav-group" id="documents-group">
     <button type="button" class="nav-main nav-toggle" aria-expanded="false" aria-controls="documents-children"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="4"/><path d="M8 2h8M8 10h8M8 14h5"/></svg><span>Documents</span><span class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></span></button>
     <div class="nav-children" id="documents-children">
-     <button type="button" data-page="upcoming" class="nav-child"><span>Overview</span></button>
+     <button type="button" data-page="upcoming" class="nav-child"><span>Обзор документов</span></button>
      <button type="button" data-page="editor" class="nav-child"><span>Trade Statements</span><span class="nav-badge mint">LIVE</span></button>
      <button type="button" data-page="account" class="nav-child"><span>Account Statements</span><span class="nav-badge mint">LIVE</span></button>
      <button type="button" data-page="drafts" class="nav-child"><span>Черновики</span><span class="nav-badge mint">LOCAL</span></button>
@@ -358,7 +358,15 @@
     </div><p class="backup-footnote">Данные хранятся на этом устройстве. Регулярно сохраняйте копию: очистка данных браузера удалит локальные записи.</p>
    </section>
    <div id="library-message" class="library-message" role="status" hidden></div>
-   <section id="page-upcoming" class="studio-page" aria-label="Будущие модули"><div class="eyebrow">РАБОЧЕЕ ПРОСТРАНСТВО / ДОКУМЕНТЫ</div><h1>Единая библиотека документов</h1><div class="future-panel"><span class="future-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5zm-9 9 9 5 9-5M3 16l9 5 9-5"/></svg></span><h2>Место для будущих модулей</h2><p>Здесь появятся новые типы выписок и документов. Сейчас доступны выписки по сделкам и торговому счёту.</p><button type="button" class="new-doc-button" data-page="editor">Открыть генератор <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></div></section>
+   <section id="page-upcoming" class="studio-page" aria-label="Обзор документов">
+    <div class="editor-heading"><div><div class="eyebrow">РАБОЧЕЕ ПРОСТРАНСТВО / ДОКУМЕНТЫ</div><h1>Ваши документы</h1><p>Выберите тип выписки или продолжите работу с сохранённым черновиком.</p></div></div>
+    <div class="document-hub-grid">
+     <button type="button" class="document-hub-card" data-page="editor"><span class="library-symbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 3h8l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM14 3v5h5M8 12h7M8 16h7"/></svg></span><span class="micro-label">ОПЕРАЦИИ · PDF</span><strong>Выписка по сделкам</strong><span class="document-hub-description">Открытые и закрытые сделки, периоды и результаты торговли.</span><span class="document-hub-link">Открыть редактор <span aria-hidden="true">↗</span></span></button>
+     <button type="button" class="document-hub-card" data-page="account"><span class="library-symbol mint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="3"/><path d="M3 10h18M7 15h4"/></svg></span><span class="micro-label">БАЛАНС И ДВИЖЕНИЯ · PDF</span><strong>Выписка по счёту</strong><span class="document-hub-description">Денежный остаток, криптоактивы и история операций клиента.</span><span class="document-hub-link">Открыть редактор <span aria-hidden="true">↗</span></span></button>
+     <button type="button" class="document-hub-card" data-page="drafts"><span class="library-symbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7h16v13H4zM7 4h10M9 11h6"/></svg></span><span class="micro-label">СОХРАНЕНО НА УСТРОЙСТВЕ</span><strong>Черновики <span class="count" id="document-hub-count">0</span></strong><span class="document-hub-description">Ваши сохранённые выписки и письма с настройками оформления.</span><span class="document-hub-link">Перейти к черновикам <span aria-hidden="true">↗</span></span></button>
+    </div>
+    <div class="library-panel"><div class="library-panel-top"><div><h2>Недавно сохранённые</h2><p>Последние черновики выписок и писем.</p></div><button type="button" class="btn small" data-page="drafts">Все черновики →</button></div><div id="document-hub-recent" class="library-list"></div></div>
+   </section>
   </main>
   <footer class="studio-footer">ESTRATTO STUDIO <span>© 2026 · WORKSPACE</span><span>Документы формируются локально</span></footer>
  </div>

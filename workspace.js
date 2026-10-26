@@ -30,7 +30,7 @@
   const draft={id:existing?.id||id(),type,name:title.slice(0,120),updatedAt:new Date().toISOString(),data,profile:type==='mail'?undefined:profile()};
   const next=clone(library);if(existing)next.drafts[next.drafts.findIndex(row=>row.id===existing.id)]=draft;else next.drafts.push(draft);
   if(next.drafts.length>1000){notice('Достигнут лимит в 1000 черновиков. Удалите ненужные.',true);return;}
-  if(write(next)){setActive(type,draft.id);input.value=draft.name;$('draft-status-'+type).textContent='Сохранено · '+stamp(draft.updatedAt);renderDrafts();if(!automatic)notice('Черновик сохранён. Дальнейшие изменения сохраняются автоматически.');}
+  if(write(next)){setActive(type,draft.id);input.value=draft.name;$('draft-status-'+type).textContent='Сохранено · '+stamp(draft.updatedAt);renderDrafts();renderDocumentHub();if(!automatic)notice('Черновик сохранён. Дальнейшие изменения сохраняются автоматически.');}
  }
  function checkpoint(type){
   const data=current(type),next=clone(library);
@@ -94,7 +94,14 @@
  document.addEventListener('click',event=>document.querySelectorAll('.library-more[open]').forEach(menu=>{if(!menu.contains(event.target))menu.open=false;}));
  document.addEventListener('keydown',event=>{if(event.key==='Escape')document.querySelectorAll('.library-more[open]').forEach(menu=>{menu.open=false;menu.querySelector('summary').focus();});});
  $('draft-search').addEventListener('input',renderDrafts);$('draft-filter').addEventListener('change',renderDrafts);$('client-search').addEventListener('input',renderClients);
- function render(){renderDrafts();renderClients();$('backup-summary').textContent=library.clients.length+' клиентов · '+library.drafts.length+' черновиков';}
+ function renderDocumentHub(){
+  $('document-hub-count').textContent=library.drafts.length;
+  const list=$('document-hub-recent');list.replaceChildren();
+  const rows=[...library.drafts].sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0,4);
+  if(!rows.length)emptyState(list,false,'editor');
+  for(const row of rows){const item=document.createElement('article');item.className='card library-item';const actions=document.createElement('div');actions.className='library-actions';actions.append(button('Продолжить',()=>switchTo(row.type,row.data,row.profile,row.id)));item.append(identity(row.name,names[row.type],symbol(row.type)),text('time',stamp(row.updatedAt),'library-date'),actions);list.append(item);}
+ }
+ function render(){renderDrafts();renderClients();renderDocumentHub();$('backup-summary').textContent=library.clients.length+' клиентов · '+library.drafts.length+' черновиков';}
  $('backup-download').addEventListener('click',()=>{try{flush();if(!localStorage.getItem(key)&&!write(library))return;const backup=core.capture(localStorage);const url=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='estratto-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notice('Резервная копия скачана.');}catch(_){notice('Не удалось создать резервную копию. Проверьте доступность хранилища браузера.',true);}});
  function cancelBackup(){pendingBackup=null;$('backup-review').hidden=true;}
  $('backup-file').addEventListener('change',async event=>{const file=event.target.files[0];event.target.value='';cancelBackup();if(!file)return;try{if(file.size>12000000)throw new Error('Файл — до 12 МБ.');pendingBackup=core.parseBackup(await file.text());const data=pendingBackup.storage[key];$('backup-review-text').textContent='Файл проверен: '+(data?.clients.length||0)+' клиентов, '+(data?.drafts.length||0)+' черновиков. Разделов данных: '+Object.keys(pendingBackup.storage).length+'.';$('backup-review').hidden=false;}catch(error){notice(error.message,true);}});
