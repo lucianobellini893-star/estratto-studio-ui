@@ -67,7 +67,9 @@
     };
     const clientName = required(state.clientName, 'Имя клиента', 80, 'clientName');
     const clientId = '';
-    const accountId = required(state.accountId, 'Номер торгового счёта', 40, 'accountId');
+    const accountId = String(state.accountId||''); // Retain legacy account numbers without relabelling them as public IDs.
+    const publicId = required(state.publicId, 'Публичный ID клиента', 49, 'publicId');
+    if(publicId.replace(/\s+/g,'').length>40)add('publicId','Публичный ID: не более 40 символов без пробелов.');
     if (!validDate(state.date || '')) add('date', 'Укажите корректную дату выписки.');
     const currency = String(state.currency || '').trim().toUpperCase();
     if (!/^[A-Z]{3}$/.test(currency)) add('currency', 'Укажите трёхбуквенный код валюты, например USD или EUR.');
@@ -122,7 +124,7 @@
       if (issues.length === start) transactions.push({ date:row.date, type:row.type, description, amount, currency:unit, reference, status, sourceCreated:row.sourceCreated||'' });
     });
     const total = group => assets[group].reduce((sum,row) => sum+row.value,0n);
-    return { errors:issues.map(issue => issue.message), issues, clientName, clientId, accountId, date:state.date, currency, ...assets, transactions:sortTransactions(transactions),
+    return { errors:issues.map(issue => issue.message), issues, clientName, clientId, accountId, publicId, date:state.date, currency, ...assets, transactions:sortTransactions(transactions),
       cashTotal:total('cash'), cryptoTotal:total('crypto'), total:total('cash')+total('crypto') };
   }
   // Preview incomplete forms without treating unknown numbers as zero.

@@ -6,7 +6,7 @@
   const storeKey = 'estratto-conto.v1';
   const now = new Date();
   const today = [now.getFullYear(), String(now.getMonth()+1).padStart(2,'0'), String(now.getDate()).padStart(2,'0')].join('-');
-  const initial = { clientName:'', clientId:'', accountId:'', date:today, currency:'USD', cash:[], crypto:[], transactions:[] };
+  const initial = { clientName:'', clientId:'', accountId:'', publicId:'', date:today, currency:'USD', cash:[], crypto:[], transactions:[] };
   let state = { ...initial };
   try {
     const saved = JSON.parse(localStorage.getItem(storeKey));
@@ -21,6 +21,8 @@
   for(const row of state.cash)if(catalog.findByName('cash',row.asset)?.symbol==='EUR'&&String(row.symbol||'').trim().toUpperCase()==='ETH'){
     row.symbol='EUR';repairedSymbol=true;
   }
+  if(!state.publicId&&state.clientId)state.publicId=state.clientId;
+  const formatPublicId=value=>String(value||'').replace(/\s+/g,'').toUpperCase().replace(/(.{4})(?=.)/g,'$1 ');
   const statusLabels={approved:'Подтверждено',pending:'Ожидает одобрения',failed:'Не выполнено',rejected:'Отклонено',cancelled:'Отменено'};
   const labels = { deposit:'Пополнение', withdrawal:'Вывод', transfer:'Перевод', fee:'Комиссия', result:'Торговый результат', interest:'Проценты', adjustment:'Корректировка', other:'Другое' };
   let lastPdf = null, generation = 0, renderGeneration = 0, timer = null, attemptedDownload = false, importIssue = '', importIssueTarget = 'ac-deposit-source';
@@ -185,7 +187,7 @@
   async function build(model,seq) {
     try {
       const profile=shared.collectProfile();
-      const data={...profile,mode:'conto',trades:[],clientName:model.clientName||'—',clientId:model.clientId||'—',accountId:model.accountId||'—',
+      const data={...profile,mode:'conto',trades:[],clientName:model.clientName||'—',clientId:model.clientId||'—',publicId:model.publicId||'—',
         accountBalance:(model.total===null?'—':core.money(model.total))+' '+(model.currency||'—'),accountCurrency:model.currency||'—',
         referenceDate:core.validDate(model.date||'')?model.date.split('-').reverse().join('/'):'—',toIso:model.date,
         disclaimer:'Il presente documento riepiloga le disponibilità e i movimenti del conto alla data indicata, sulla base dei dati forniti. La valorizzazione degli attivi è espressa nella valuta di riferimento. I movimenti mantengono la propria valuta e non vengono sommati nuovamente al saldo. Documento riservato al cliente; non costituisce consulenza finanziaria.'};
@@ -225,6 +227,9 @@
       if(seq===renderGeneration)stage.replaceChildren(fragment);
     } finally { await documentPdf.destroy(); }
   }
+  $('ac-public-id').addEventListener('blur',()=>{
+    const input=$('ac-public-id');input.value=formatPublicId(input.value);state.publicId=input.value;persist();invalidate();
+  });
   $('page-account').addEventListener('input',event=>{
     const input=event.target;
     if(input.dataset.accountField){
@@ -280,7 +285,7 @@
     try {
       if(!lastPdf || lastPdf.generation!==seq)await build(core.preview(state),seq);
       if(!lastPdf || generation!==seq || lastPdf.model.errors.length)return;
-      const slug=lastPdf.model.accountId.replace(/[^A-Za-z0-9]+/g,'_')||'account';
+      const slug=lastPdf.model.publicId.replace(/[^A-Za-z0-9]+/g,'_')||'account';
       const url=URL.createObjectURL(new Blob([lastPdf.bytes],{type:'application/pdf'})),link=node('a');
       link.href=url;link.download=`estratto_conto_${slug}_${(lastPdf.model.date||'').replace(/-/g,'')}.pdf`;
       document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
@@ -303,7 +308,7 @@
       return result;
     }
   };
-  for(const input of document.querySelectorAll('[data-account-field]'))input.value=state[input.dataset.accountField]||'';
+  for(const input of document.querySelectorAll('[data-account-field]'))input.value=input.dataset.accountField==='publicId'?formatPublicId(state.publicId):state[input.dataset.accountField]||'';
   picker.attach($('ac-currency'),{group:'currency',title:'Валюта оценки счёта',onSelect:item=>{
     $('ac-currency').value=item.symbol;$('ac-currency').dispatchEvent(new Event('input',{bubbles:true}));
   }});

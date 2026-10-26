@@ -2,7 +2,7 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const core=require('../account-core.js');
 const asset=(changes={})=>({asset:'Euro',symbol:'EUR',wallet:'Spot',quantity:'2.0000',price:'1.1470',...changes});
-const state=(changes={})=>({clientName:'Test Client',clientId:'TEST PUBLIC ID',accountId:'TEST ACCOUNT',date:'2026-10-26',currency:'USD',cash:[asset()],crypto:[],transactions:[],...changes});
+const state=(changes={})=>({clientName:'Test Client',clientId:'TEST PUBLIC ID',accountId:'TEST ACCOUNT',publicId:'TEST PUBLIC',date:'2026-10-26',currency:'USD',cash:[asset()],crypto:[],transactions:[],...changes});
 test('cash and crypto reproduce four-decimal account balance without summing transactions twice',()=>{
  const result=core.validate(state({crypto:[asset({asset:'Ethereum',symbol:'ETH',quantity:'0.0478964200',price:'1,912.3129'})],transactions:[{date:'2026-10-01',type:'deposit',amount:'100',currency:'USD',reference:'T1'}]}));
  assert.deepEqual(result.errors,[]);assert.equal(result.cashTotal,22940n);assert.equal(result.cryptoTotal,915929n);assert.equal(result.total,938869n);assert.equal(core.money(result.total),'93,8869');
@@ -56,9 +56,9 @@ test('invalid numeric input remains unknown in a draft instead of being silently
 test('completed form produces a final model instead of a draft',()=>{
  const result=core.preview(state());assert.equal(result.draft,false);assert.deepEqual(result.errors,[]);assert.equal(result.total,22940n);
 });
-test('account statements do not require or retain the trade public ID',()=>{
- const result=core.validate(state({clientId:''}));assert.deepEqual(result.errors,[]);assert.equal(result.clientId,'');
- const stored=core.validate(state({clientId:'OLD PUBLIC ID'}));assert.equal(stored.clientId,'');
+test('account statement requires an actual public ID instead of relabelling a legacy account number',()=>{
+ const valid=core.validate(state({accountId:'',publicId:'ABCD1234EFGH5678'}));assert.deepEqual(valid.errors,[]);assert.equal(valid.publicId,'ABCD1234EFGH5678');
+ const missing=core.validate(state({accountId:'234234',publicId:''}));assert.ok(missing.issues.some(issue=>issue.path==='publicId'));
 });
 test('validation identifies every missing asset field for inline highlighting',()=>{
  const result=core.validate(state({cash:[asset({asset:'',symbol:'',wallet:'',quantity:'',price:''})]}));

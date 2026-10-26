@@ -211,7 +211,7 @@
         <textarea id="ac-withdrawal-source" rows="7" spellcheck="false" placeholder="Вставьте историю выводов с заголовками ID, Dest currency, Dest amount, Order status, Trading users, Created…"></textarea>
         <span class="hint" id="ac-withdrawal-source-status" role="status">Можно оставить пустым, если нужны только пополнения.</span>
        </label>
-       <p class="hint">Обе вставки объединяются в одну историю одного клиента: новые операции сверху, с учётом времени Created. Повторные ID не дублируются. Номер счёта и остатки заполните ниже.</p>
+       <p class="hint">Обе вставки объединяются в одну историю одного клиента: новые операции сверху, с учётом времени Created. Повторные ID не дублируются. Публичный ID клиента и остатки заполните ниже.</p>
        <div class="msg" id="ac-deposit-error" role="status" hidden></div>
        <div id="ac-deposit-result" hidden>
         <div class="deposit-import-summary"><strong id="ac-deposit-client"></strong><span id="ac-deposit-count"></span><span id="ac-deposit-totals"></span></div>
@@ -225,7 +225,8 @@
       <section class="card" aria-labelledby="ac-client-heading">
        <h2 id="ac-client-heading"><span class="step">2</span>Клиент и торговый счёт</h2>
        <label class="f">Имя и фамилия<input id="ac-client-name" data-account-field="clientName" type="text" maxlength="80" autocomplete="off" placeholder="Имя владельца счёта"></label>
-       <label class="f">Номер торгового счёта<input id="ac-account-id" data-account-field="accountId" type="text" class="mono" maxlength="40" autocomplete="off" placeholder="Account ID"></label>
+       <label class="f">Публичный ID клиента<input id="ac-public-id" data-account-field="publicId" type="text" class="mono" maxlength="49" autocomplete="off" placeholder="XXXX XXXX XXXX XXXX"></label>
+       <p class="hint">ID pubblico форматируется группами по четыре символа. В истории операций CRM его нет — укажите публичный ID клиента здесь.</p>
        <div class="row">
         <label class="f">Дата выписки<input id="ac-date" data-account-field="date" type="date"></label>
         <label class="f">Валюта оценки<input id="ac-currency" data-account-field="currency" type="text" maxlength="3" autocomplete="off" placeholder="USD"></label>
@@ -713,7 +714,8 @@ async function buildPdf(data, renderContent) {
     const clientX = firstDivider + gap;
     const right = [
       ...lines(data.clientName, "InterM", 11.5, 70, C.BLACK),
-      ...lines(`ID conto  ${data.accountId}`, "InterR", 8.5, 70, C.GRAY)
+      ...lines("ID pubblico", "InterR", 8.5, 70, C.GRAY),
+      ...lines(fmtPid(data.publicId), "InterM", 9.5, 70, C.BLACK)
     ];
     const secondDivider = clientX + measuredWidth(right) + gap;
     const balanceX = secondDivider + gap;
@@ -726,7 +728,7 @@ async function buildPdf(data, renderContent) {
     if (bottom > 100) throw new Error("Сократите реквизиты компании: заголовок занимает слишком много места.");
     return { left, right, balance, clientX, balanceX, firstDivider, secondDivider, bottom, contentTop: Math.max(FRAME_FIRST, bottom + 7) };
   }
-  const accountHeader = data.accountId ? accountHeaderLayout() : null;
+  const accountHeader = data.mode === "conto" ? accountHeaderLayout() : null;
   function headerFirst() {
     if (accountHeader) {
       drawLogo(MX, LOGO_TOP, 14); drawPeriod();
@@ -763,27 +765,8 @@ async function buildPdf(data, renderContent) {
     doc.line(barX, TOP_Y + logoH + 3, barX, lowest + 2);
   }
   function headerNext() {
-    if (accountHeader) {
-      const logoH = 11;
-      drawLogo(MX, LOGO_TOP, logoH); drawPeriod();
-      const x = MX + (data.logo ? Math.min(logoH * data.logo.ratio, 55) : logoH) + 6;
-      f("InterM", 10, C.BLACK);
-      const names = doc.splitTextToSize(data.clientName, RIGHT - x - 70);
-      names.forEach((line, i) => doc.text(line, x, LOGO_TOP + 4.5 + i * 4));
-      const idY = LOGO_TOP + 4.5 + names.length * 4;
-      f("InterR", 8, C.GRAY);
-      doc.text(`ID conto  ${data.accountId}`, x, idY);
-      return;
-    }
-
-    const logoH = 11;
-    drawLogo(MX, LOGO_TOP, logoH);
+    drawLogo(MX, LOGO_TOP, 11);
     drawPeriod();
-    const x = MX + (data.logo ? Math.min(logoH * data.logo.ratio, 55) : logoH) + 6;
-    f("InterM", 10, C.BLACK); doc.text(data.clientName, x, LOGO_TOP + 4.5);
-    f("InterR", 8, C.GRAY); const lbl = "ID pubblico  "; doc.text(lbl, x, LOGO_TOP + 9);
-    const lw = tw(lbl);
-    f("InterM", 8.5, C.BLACK); doc.text(fmtPid(data.clientId), x + lw, LOGO_TOP + 9);
   }
   function footer(pageNo, total) {
     const lineY = H - 32;
