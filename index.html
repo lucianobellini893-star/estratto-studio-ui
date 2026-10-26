@@ -22,8 +22,8 @@
   <div class="sidebar-scroll">
    <div class="sidebar-kicker">WORKSPACE</div>
    <button type="button" data-page="overview" class="nav-main active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>Dashboard</span></button>
-   <div class="nav-group expanded" id="documents-group">
-    <button type="button" class="nav-main nav-toggle" aria-expanded="true" aria-controls="documents-children"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="4"/><path d="M8 2h8M8 10h8M8 14h5"/></svg><span>Documents</span><span class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></span></button>
+   <div class="nav-group" id="documents-group">
+    <button type="button" class="nav-main nav-toggle" aria-expanded="false" aria-controls="documents-children"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="4"/><path d="M8 2h8M8 10h8M8 14h5"/></svg><span>Documents</span><span class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></span></button>
     <div class="nav-children" id="documents-children">
      <button type="button" data-page="upcoming" class="nav-child"><span>Overview</span></button>
      <button type="button" data-page="editor" class="nav-child"><span>Trade Statements</span><span class="nav-badge mint">LIVE</span></button>
@@ -1492,7 +1492,10 @@ renderLogoParts();
     if(!['overview','editor','account','mail','upcoming'].includes(page))return;
     for(const p of document.querySelectorAll('.studio-page'))p.classList.toggle('active',p.id === 'page-'+page);
     for(const b of pageButtons){b.classList.toggle('active',b.dataset.page===page); if(b.classList.contains('nav-main') || b.classList.contains('nav-child')) { if(b.dataset.page===page)b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); }}
-    if(page==='editor'||page==='account'||page==='upcoming') {const g=document.getElementById('documents-group');g.classList.add('expanded');g.querySelector('.nav-toggle').setAttribute('aria-expanded','true');}
+    const documentsOpen=['editor','account','upcoming'].includes(page);
+    const documentsGroup=document.getElementById('documents-group');
+    documentsGroup.classList.toggle('expanded',documentsOpen);
+    documentsGroup.querySelector('.nav-toggle').setAttribute('aria-expanded',String(documentsOpen));
     window.scrollTo({top:0,behavior:'instant'});
     document.dispatchEvent(new CustomEvent('estratto:navigate', { detail: page }));
   }
