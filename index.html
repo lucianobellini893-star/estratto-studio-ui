@@ -28,17 +28,17 @@
      <button type="button" data-page="upcoming" class="nav-child"><span>Overview</span></button>
      <button type="button" data-page="editor" class="nav-child"><span>Trade Statements</span><span class="nav-badge mint">LIVE</span></button>
      <button type="button" data-page="account" class="nav-child"><span>Account Statements</span><span class="nav-badge mint">LIVE</span></button>
-     <div class="nav-child nav-disabled" title="Будет доступно в следующих версиях"><span>Drafts</span><span class="nav-badge peach">Soon</span></div>
+     <button type="button" data-page="drafts" class="nav-child"><span>Черновики</span><span class="nav-badge mint">LOCAL</span></button>
      <div class="nav-child nav-disabled"><span>History</span></div>
      <div class="nav-child nav-disabled"><span>Scheduled</span></div>
     </div>
    </div>
    <button type="button" data-page="mail" class="nav-main"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg><span>Письма</span><span class="nav-badge mint">NEW</span></button>
    <div class="sidebar-kicker section-gap">MANAGEMENT</div>
-   <button type="button" class="nav-main nav-soon" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4 21v-2a8 8 0 0 1 16 0v2z"/></svg><span>Clients</span><span class="small-meta">Soon</span></button>
+   <button type="button" class="nav-main" data-page="clients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4 21v-2a8 8 0 0 1 16 0v2z"/></svg><span>Клиенты</span><span class="nav-badge mint">LOCAL</span></button>
    <button type="button" class="nav-main nav-soon" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h10l4 4v14H5zM15 3v5h4M8 12h8M8 16h6"/></svg><span>Templates</span><span class="small-meta">Soon</span></button>
    <button type="button" class="nav-main nav-soon" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="m7 16 4-4 3 2 4-6"/></svg><span>Reports</span><span class="small-meta">Soon</span></button>
-   <button type="button" class="nav-main nav-soon" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M4 12H2m20 0h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg><span>Settings</span><span class="small-meta">Soon</span></button>
+   <button type="button" class="nav-main" data-page="backup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M4 12H2m20 0h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg><span>Резервная копия</span></button>
   </div>
   <div class="sidebar-bottom"><div class="sidebar-profile">ES</div><div><strong>Estratto Studio</strong><small>Local workspace</small></div><span class="sidebar-online"></span></div>
  </aside>
@@ -327,6 +327,26 @@
      </aside>
     </div>
    </section>
+   <section id="page-drafts" class="studio-page" aria-label="Черновики">
+    <div class="editor-heading"><div><div class="eyebrow">ДОКУМЕНТЫ / ЛОКАЛЬНО</div><h1>Черновики</h1><p>Выписки и письма, сохранённые в этом браузере.</p></div></div>
+    <div class="library-filters"><input id="draft-search" type="search" placeholder="Найти черновик…" aria-label="Поиск черновика"><select id="draft-filter" aria-label="Тип черновика"><option value="">Все типы</option><option value="editor">Выписка по сделкам</option><option value="account">Выписка по счёту</option><option value="mail">Письмо</option></select></div>
+    <div id="draft-list" class="library-list"></div>
+   </section>
+   <section id="page-clients" class="studio-page" aria-label="Клиенты">
+    <div class="editor-heading"><div><div class="eyebrow">РАБОЧЕЕ ПРОСТРАНСТВО / КЛИЕНТЫ</div><h1>Клиенты</h1><p>Выберите клиента, чтобы создать новую выписку с его данными.</p></div></div>
+    <div class="clients-layout"><section class="card"><h2 id="client-form-title">Новый клиент</h2><form id="client-form" class="controls">
+     <label class="f">Имя и фамилия<input id="library-client-name" required maxlength="80" autocomplete="off"></label>
+     <label class="f">Публичный ID<input id="library-client-id" maxlength="49" autocomplete="off"></label>
+     <label class="f">Валюта счёта<select id="library-client-currency"><option>EUR</option><option>USD</option><option>GBP</option><option>CHF</option><option>CAD</option><option>AUD</option><option>JPY</option></select></label>
+     <div class="library-actions"><button type="submit" class="btn primary">Сохранить клиента</button><button type="button" class="btn" id="client-cancel" hidden>Отменить</button></div>
+    </form></section><div><input type="search" id="client-search" placeholder="Поиск по имени или ID…" aria-label="Поиск клиента"><div id="client-list" class="library-list"></div></div></div>
+   </section>
+   <section id="page-backup" class="studio-page" aria-label="Резервная копия">
+    <div class="editor-heading"><div><div class="eyebrow">РАБОЧЕЕ ПРОСТРАНСТВО / ДАННЫЕ</div><h1>Резервная копия</h1><p>Сохраните данные в файл или перенесите их в другой браузер.</p></div></div>
+    <div class="backup-layout"><section class="card"><h2>Сохранить всё</h2><p class="hint">Клиенты, черновики, текущие выписки и письмо, логотипы и настройки компании — в одном JSON-файле.</p><div id="backup-summary" class="hint"></div><button type="button" id="backup-download" class="btn primary">Скачать резервную копию</button><p class="hint">Данные хранятся только в этом браузере на этом адресе сайта. Очистка данных браузера удалит их. Файл содержит данные клиентов — храните его у себя.</p></section>
+    <section class="card"><h2>Восстановить из файла</h2><label class="file-btn btn">Выбрать резервную копию<input id="backup-file" type="file" accept=".json,application/json"></label><div id="backup-review" hidden><p id="backup-review-text" class="hint"></p><p class="hint">Восстановление заменит текущие данные этого браузера содержимым файла. При необходимости сначала скачайте текущую резервную копию.</p><button type="button" id="backup-restore" class="btn primary">Восстановить эти данные</button><button type="button" id="backup-cancel" class="btn">Отмена</button></div></section></div>
+   </section>
+   <div id="library-message" class="library-message" role="status" hidden></div>
    <section id="page-upcoming" class="studio-page" aria-label="Будущие модули"><div class="eyebrow">РАБОЧЕЕ ПРОСТРАНСТВО / ДОКУМЕНТЫ</div><h1>Единая библиотека документов</h1><div class="future-panel"><span class="future-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5zm-9 9 9 5 9-5M3 16l9 5 9-5"/></svg></span><h2>Место для будущих модулей</h2><p>Здесь появятся новые типы выписок и документов. Сейчас доступны выписки по сделкам и торговому счёту.</p><button type="button" class="new-doc-button" data-page="editor">Открыть генератор <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></div></section>
   </main>
   <footer class="studio-footer">ESTRATTO STUDIO <span>© 2026 · WORKSPACE</span><span>Документы формируются локально</span></footer>
@@ -1468,7 +1488,7 @@ $("download").addEventListener("click", async () => {
 let rt = null;
 window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { drawSelection(); if (lastPdf) renderPreview(lastPdf.bytes, buildSeq); }, 250); });
 
-window.EstrattoDocument = { buildPdf, collectProfile: collect, relayoutLogo: drawSelection, sanitizeSvg, rasterizeSvg };
+window.EstrattoDocument = { buildPdf, collectProfile: collect, relayoutLogo: drawSelection, sanitizeSvg, rasterizeSvg, getState:()=>JSON.parse(JSON.stringify(S)) };
 
 /* boot */
 renderLogoParts();
@@ -1489,10 +1509,10 @@ renderLogoParts();
   'use strict';
   const pageButtons = [...document.querySelectorAll('[data-page]')];
   function navigate(page){
-    if(!['overview','editor','account','mail','upcoming'].includes(page))return;
+    if(!['overview','editor','account','mail','upcoming','drafts','clients','backup'].includes(page))return;
     for(const p of document.querySelectorAll('.studio-page'))p.classList.toggle('active',p.id === 'page-'+page);
     for(const b of pageButtons){b.classList.toggle('active',b.dataset.page===page); if(b.classList.contains('nav-main') || b.classList.contains('nav-child')) { if(b.dataset.page===page)b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); }}
-    const documentsOpen=['editor','account','upcoming'].includes(page);
+    const documentsOpen=['editor','account','upcoming','drafts'].includes(page);
     const documentsGroup=document.getElementById('documents-group');
     documentsGroup.classList.toggle('expanded',documentsOpen);
     documentsGroup.querySelector('.nav-toggle').setAttribute('aria-expanded',String(documentsOpen));
@@ -1513,7 +1533,8 @@ renderLogoParts();
   const watcher=new MutationObserver(updateMetrics);
   for(const id of ['cnt-aperte','cnt-chiuse'])watcher.observe(document.getElementById(id),{childList:true,characterData:true,subtree:true});
   updateMetrics();
-  if(['#editor','#account','#mail'].includes(location.hash))navigate(location.hash.slice(1));
+  window.EstrattoNavigate=navigate;
+  if(['#editor','#account','#mail','#drafts','#clients','#backup'].includes(location.hash))navigate(location.hash.slice(1));
 })();
 </script>
 <script src="account-assets.js"></script>
@@ -1525,5 +1546,7 @@ renderLogoParts();
 <script src="account-import.js"></script>
 <script src="mail-core.js"></script>
 <script src="mail.js"></script>
+<script src="workspace-core.js"></script>
+<script src="workspace.js"></script>
 </body>
 </html>

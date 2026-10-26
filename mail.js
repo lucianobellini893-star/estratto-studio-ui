@@ -127,5 +127,6 @@
   $('mail-download-eml').addEventListener('click',()=>{if(ready())download(core.eml(state,options),'message/rfc822','messaggio.eml');});
   $('mail-logo-download').addEventListener('click',()=>{if(state.logoData){const a=document.createElement('a');a.href=state.logoData;a.download='logo-mail.png';a.click();}});
   for(const device of ['desktop','mobile'])$('mail-'+device).addEventListener('click',()=>{for(const item of ['desktop','mobile'])$('mail-'+item).setAttribute('aria-pressed',String(item===device));$('mail-preview-stage').classList.toggle('phone',device==='mobile');});
+  window.EstrattoMailForm={get:()=>{const {logoData,...draft}=state;return JSON.parse(JSON.stringify(draft));}};
   partsUI();renderLogo();
 })();
