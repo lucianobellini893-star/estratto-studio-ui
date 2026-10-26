@@ -10,8 +10,8 @@
 <script src="vendor/qrcode.js"></script>
 <script src="vendor/pdf.min.js"></script>
 <script src="vendor/pdf.worker.min.js"></script>
-<script src="logo-composer.js"></script>
-<link rel="stylesheet" href="interface.css">
+<script src="logo-composer.js?v=20261026-history-sync"></script>
+<link rel="stylesheet" href="interface.css?v=20261026-history-sync">
 </head>
 <body>
 
@@ -1512,15 +1512,15 @@ $("download").addEventListener("click", async () => {
     a.href = url; a.download = fileName(lastPdf.data);
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
-    window.EstrattoRecordExport?.('editor','PDF скачан',JSON.parse(JSON.stringify(S)));
-    showMsg("dl-msg", "PDF скачан.");
+    const historySaved=window.EstrattoRecordExport?.('editor','PDF скачан',JSON.parse(JSON.stringify(S)));
+    showMsg("dl-msg",historySaved?"PDF скачан и добавлен в историю.":"PDF скачан, но история не сохранена. Обновите страницу и проверьте хранилище браузера.",!historySaved);
     return;
   }
   try {
     const historySnapshot=JSON.parse(JSON.stringify(S));
     await downloads.save({ filename: fileName(lastPdf.data), data: new Blob([lastPdf.bytes], { type: "application/pdf" }) });
-    window.EstrattoRecordExport?.('editor','PDF скачан',historySnapshot);
-    showMsg("dl-msg", "PDF сохранён.");
+    const historySaved=window.EstrattoRecordExport?.('editor','PDF скачан',historySnapshot);
+    showMsg("dl-msg",historySaved?"PDF сохранён и добавлен в историю.":"PDF сохранён, но запись в историю не сохранена. Проверьте хранилище браузера.",!historySaved);
   } catch (err) {
     const code = err && err.code;
     if (code === "declined") showMsg("dl-msg", "Сохранение отменено.");
@@ -1581,16 +1581,16 @@ renderLogoParts();
   if(['#editor','#account','#mail','#drafts','#clients','#backup','#history','#templates'].includes(location.hash))navigate(location.hash.slice(1));
 })();
 </script>
-<script src="account-assets.js"></script>
-<script src="account-core.js"></script>
-<script src="account-picker.js"></script>
-<script src="account-deposits.js"></script>
-<script src="account-numbers.js"></script>
-<script src="account.js"></script>
-<script src="account-import.js"></script>
-<script src="mail-core.js"></script>
-<script src="mail.js"></script>
-<script src="workspace-core.js"></script>
-<script src="workspace.js"></script>
+<script src="account-assets.js?v=20261026-history-sync"></script>
+<script src="account-core.js?v=20261026-history-sync"></script>
+<script src="account-picker.js?v=20261026-history-sync"></script>
+<script src="account-deposits.js?v=20261026-history-sync"></script>
+<script src="account-numbers.js?v=20261026-history-sync"></script>
+<script src="account.js?v=20261026-history-sync"></script>
+<script src="account-import.js?v=20261026-history-sync"></script>
+<script src="mail-core.js?v=20261026-history-sync"></script>
+<script src="mail.js?v=20261026-history-sync"></script>
+<script src="workspace-core.js?v=20261026-history-sync"></script>
+<script src="workspace.js?v=20261026-history-sync"></script>
 </body>
 </html>

@@ -39,6 +39,17 @@
   for(const collection of [value.clients,value.drafts])if(new Set(collection.map(row=>row.id)).size!==collection.length)throw new Error('Повторяющиеся ID в библиотеке.');
   return value;
  }
+ function mergeLibrary(base,next,latest){
+  const result={...latest,version:1};
+  for(const field of ['clients','drafts','history','templates']){
+   const before=new Map((base[field]||[]).map(row=>[row.id,row])),after=new Map((next[field]||[]).map(row=>[row.id,row]));
+   const rows=new Map((latest[field]||[]).map(row=>[row.id,row]));
+   for(const id of before.keys())if(!after.has(id))rows.delete(id);
+   for(const [id,row] of after)if(!before.has(id)||JSON.stringify(before.get(id))!==JSON.stringify(row))rows.set(id,row);
+   result[field]=[...rows.values()];
+  }
+  return library(result);
+ }
  const variables=['client_name','company','amount','date'];
  function applyTemplate(data,values){
   const used=new Set();const replace=text=>String(text||'').replace(/{{\s*([^{}]+?)\s*}}/g,(all,key)=>{used.add(key);if(!variables.includes(key))throw new Error('Неизвестная подстановка: '+key);if(!String(values[key]||'').trim())throw new Error('Заполните подстановку: '+key);return String(values[key]);});
@@ -77,5 +88,5 @@
   try{for(const key of keys)storage.removeItem(key);for(const [key,value] of Object.entries(valid.storage))storage.setItem(key,JSON.stringify(value));}
   catch(error){for(const key of keys)storage.removeItem(key);for(const [key,value] of before)if(value!==null)storage.setItem(key,value);throw error;}
  }
- return {variables,applyTemplate,keys,types,library,parseBackup,capture,restore};
+ return {mergeLibrary,variables,applyTemplate,keys,types,library,parseBackup,capture,restore};
 });

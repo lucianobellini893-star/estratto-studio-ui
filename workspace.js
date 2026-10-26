@@ -8,7 +8,21 @@
  library.history=library.history||[];library.templates=library.templates||[];
  const id=()=>crypto.randomUUID(),clone=value=>JSON.parse(JSON.stringify(value));
  function notice(text,error=false){const box=$('library-message');box.hidden=false;box.textContent=text;box.classList.toggle('error',error);clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>box.hidden=true,9000);}
- function write(next){if(libraryReadError){notice('Библиотека повреждена. Сначала сохраните резервную копию или восстановите корректную.',true);return false;}try{localStorage.setItem(key,JSON.stringify(next));library=next;return true;}catch(_){notice('Не удалось сохранить: хранилище браузера недоступно или заполнено. Скачайте резервную копию.',true);return false;}}
+ function write(next){
+  if(libraryReadError){notice('Библиотека повреждена. Сначала сохраните резервную копию или восстановите корректную.',true);return false;}
+  try{
+   const raw=localStorage.getItem(key),latest=raw?core.library(JSON.parse(raw)):{version:1,clients:[],drafts:[],history:[],templates:[]};
+   const merged=core.mergeLibrary(library,next,latest);
+   localStorage.setItem(key,JSON.stringify(merged));library=merged;return true;
+  }catch(_){notice('Не удалось сохранить: проверьте свободное место в хранилище браузера и резервную копию.',true);return false;}
+ }
+ function syncLibrary(){
+  try{const raw=localStorage.getItem(key);const latest=raw?core.library(JSON.parse(raw)):{version:1,clients:[],drafts:[],history:[],templates:[]};library={...latest,history:latest.history||[],templates:latest.templates||[]};libraryReadError=false;}
+  catch(_){libraryReadError=true;notice('Не удалось прочитать библиотеку. Скачайте резервную копию перед изменениями.',true);}
+ }
+ window.addEventListener('storage',event=>{if(event.key===key||event.key===null){syncLibrary();render();}});
+ window.addEventListener('focus',()=>{syncLibrary();render();});
+
  function current(type){return type==='editor'?window.EstrattoDocument.getState():type==='account'?window.EstrattoAccountForm.get():window.EstrattoMailForm.get();}
  function profile(){const data=current('editor');return Object.fromEntries(profileKeys.filter(key=>key in data).map(key=>[key,data[key]]));}
  function flush(){for(const type of core.types)localStorage.setItem(stateKeys[type],JSON.stringify(current(type)));}
@@ -91,7 +105,7 @@
   root.addEventListener('input',event=>{if(!active(type))return;clearTimeout(autoTimer);status.textContent='Сохраняю…';autoTimer=setTimeout(()=>saveDraft(type,false,true),700);});
   root.addEventListener('click',event=>{if(event.target.closest('[data-account-add],[data-remove],#mail-logo-remove,[data-mail-format],#mail-footer-enabled')){clearTimeout(autoTimer);autoTimer=setTimeout(()=>saveDraft(type,false,true),700);}});
  }
- document.addEventListener('estratto:navigate',()=>{for(const type of core.types)if(active(type))saveDraft(type,false,true);render();});
+ document.addEventListener('estratto:navigate',()=>{syncLibrary();for(const type of core.types)if(active(type))saveDraft(type,false,true);render();});
  document.addEventListener('click',event=>document.querySelectorAll('.library-more[open]').forEach(menu=>{if(!menu.contains(event.target))menu.open=false;}));
  document.addEventListener('keydown',event=>{if(event.key==='Escape')document.querySelectorAll('.library-more[open]').forEach(menu=>{menu.open=false;menu.querySelector('summary').focus();});});
  $('draft-search').addEventListener('input',renderDrafts);$('draft-filter').addEventListener('change',renderDrafts);$('client-search').addEventListener('input',renderClients);
@@ -110,11 +124,11 @@
  $('backup-restore').addEventListener('click',()=>{if(!pendingBackup)return;try{clearTimeout(autoTimer);core.restore(localStorage,pendingBackup);switching=true;for(const type of core.types)setActive(type,'');location.hash='backup';location.reload();}catch(_){notice('Восстановление не выполнено. Текущие данные сохранены; возможно, хранилище заполнено.',true);}});
 
  window.EstrattoRecordExport=(type,action,data,savedProfile)=>{
-  if(!core.types.includes(type))return;
+  if(!core.types.includes(type))return false;
   const snapshot=clone(data||current(type));const next=clone(library);
-  if(next.history.length>=1000)return notice('История заполнена (1000 записей). Экспорт выполнен, но запись не сохранена. Удалите ненужные записи.',true);
+  if(next.history.length>=1000){notice('История заполнена (1000 записей). Экспорт выполнен, но запись не сохранена. Удалите ненужные записи.',true);return false;}
   next.history.push({id:id(),type,action,name:(snapshot.clientName||snapshot.title||names[type]).slice(0,200),createdAt:new Date().toISOString(),data:snapshot,profile:type==='mail'?undefined:savedProfile|| (type==='editor'?Object.fromEntries(profileKeys.filter(key=>key in snapshot).map(key=>[key,snapshot[key]])):profile())});
-  if(write(next))renderHistory();
+  if(write(next)){renderHistory();return true;}return false;
  };
  function renderHistory(){
   const list=$('history-list'),query=$('history-search').value.trim().toLocaleLowerCase(),filter=$('history-filter').value;list.replaceChildren();$('history-total').textContent=library.history.length;

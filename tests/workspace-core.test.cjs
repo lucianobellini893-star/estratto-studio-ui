@@ -38,3 +38,13 @@ test('template cannot silently export missing or unknown variables',()=>{
  assert.throws(()=>core.applyTemplate({text:'{{secret}}'},{}),/secret/);
  assert.equal(core.applyTemplate({text:'Testo senza variabili'},{}).text,'Testo senza variabili');
 });
+test('saving from an older tab preserves exports and records added in another tab',()=>{
+ const base={version:1,clients:[],drafts:[],history:[],templates:[]};
+ const exported={id:'export',type:'account',name:'Rosa Allocca',data:{clientName:'Rosa Allocca'}};
+ const latest={...base,history:[exported]};
+ const next={...base,clients:[{id:'c',name:'Mario',publicId:'ID',currency:'EUR'}]};
+ const merged=core.mergeLibrary(base,next,latest);
+ assert.deepEqual(merged.history,[exported]);assert.equal(merged.clients.length,1);
+ const deleted=core.mergeLibrary(merged,{...merged,history:[]},{...merged,history:[exported,{...exported,id:'new'}]});
+ assert.deepEqual(deleted.history.map(row=>row.id),['new']);
+});
