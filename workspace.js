@@ -15,6 +15,13 @@
  function setActive(type,value){try{sessionStorage.setItem('estratto-active-'+type,value);}catch(_){}}
  function button(text,action,style=''){const b=document.createElement('button');b.type='button';b.className='btn small '+style;b.textContent=text;b.addEventListener('click',action);return b;}
  function text(tag,value,className=''){const n=document.createElement(tag);n.textContent=value;n.className=className;return n;}
+ function symbol(kind){
+  const node=document.createElement('span');node.className='library-symbol '+(kind==='mail'?'peach':'');
+  node.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(kind==='mail'?'<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/>':'<path d="M6 3h8l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM14 3v5h5M8 12h7M8 16h7"/>')+'</svg>';return node;
+ }
+ function identity(title,subtitle,avatar){const box=document.createElement('div');box.className='library-identity';const copy=document.createElement('div');copy.append(text('h2',title),text('p',subtitle,'hint'));box.append(avatar,copy);return box;}
+ function moreMenu(actions){const menu=document.createElement('details');menu.className='library-more';const summary=document.createElement('summary');summary.textContent='•••';summary.setAttribute('aria-label','Другие действия');const popup=document.createElement('div');popup.className='library-more-menu';popup.append(...actions);menu.append(summary,popup);menu.addEventListener('toggle',()=>{if(menu.open)document.querySelectorAll('.library-more[open]').forEach(other=>{if(other!==menu)other.open=false;});});popup.addEventListener('click',()=>menu.open=false);return menu;}
+ function emptyState(list,filtered,kind){const box=document.createElement('div');box.className='library-empty';box.append(symbol(kind),text('h3',filtered?'Ничего не найдено':kind==='clients'?'Ваш первый клиент':'Здесь будут ваши черновики'),text('p',filtered?'Попробуйте другое имя или название.':kind==='clients'?'Заполните карточку справа, чтобы быстро создавать выписки.':'Сохраните выписку или письмо в редакторе — и продолжайте работу в любое время.'));list.append(box);}
  function stamp(value){const date=new Date(value);return Number.isFinite(date.getTime())?date.toLocaleString('ru-RU',{dateStyle:'short',timeStyle:'short'}):'—';}
  function saveDraft(type,newCopy=false,automatic=false){
   const input=$('draft-name-'+type),data=current(type),existing=!newCopy&&library.drafts.find(row=>row.id===active(type)&&row.type===type);
@@ -43,9 +50,10 @@
  function renderDrafts(){
   const list=$('draft-list'),query=$('draft-search').value.trim().toLocaleLowerCase(),filter=$('draft-filter').value;list.replaceChildren();
   const rows=library.drafts.filter(row=>(!filter||row.type===filter)&&[row.name,row.data.clientName,row.data.title].some(value=>String(value||'').toLocaleLowerCase().includes(query))).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
-  if(!rows.length)list.append(text('p',library.drafts.length?'Ничего не найдено.':'Сохраните первый черновик в редакторе выписки или письма.','account-empty'));
-  for(const row of rows){const card=document.createElement('article');card.className='card library-item';card.append(text('h2',row.name),text('p',names[row.type]+' · '+stamp(row.updatedAt),'hint'));
-   const actions=document.createElement('div');actions.className='library-actions';actions.append(button('Открыть',()=>switchTo(row.type,row.data,row.profile,row.id),'primary'),button('Создать копию',()=>{const next=clone(library);next.drafts.push({...clone(row),id:id(),name:(row.name+' · копия').slice(0,120),updatedAt:new Date().toISOString()});if(next.drafts.length>1000)return notice('Лимит: 1000 черновиков.',true);if(write(next))renderDrafts();}),button('Удалить',()=>removeRecord('drafts',row.id)));
+  $('draft-total').textContent=library.drafts.length;
+  if(!rows.length)emptyState(list,Boolean(query||filter),'editor');
+  for(const row of rows){const card=document.createElement('article');card.className='card library-item';card.append(identity(row.name,names[row.type],symbol(row.type)),text('time',stamp(row.updatedAt),'library-date'));
+   const actions=document.createElement('div');actions.className='library-actions';actions.append(button('Открыть',()=>switchTo(row.type,row.data,row.profile,row.id)),moreMenu([button('Создать копию',()=>{const next=clone(library);next.drafts.push({...clone(row),id:id(),name:(row.name+' · копия').slice(0,120),updatedAt:new Date().toISOString()});if(next.drafts.length>1000)return notice('Лимит: 1000 черновиков.',true);if(write(next))renderDrafts();}),button('Удалить',()=>removeRecord('drafts',row.id),'library-delete')]));
    card.append(actions);list.append(card);
   }
  }
@@ -66,22 +74,25 @@
  function renderClients(){
   const query=$('client-search').value.trim().toLocaleLowerCase(),list=$('client-list');list.replaceChildren();
   const rows=library.clients.filter(row=>(row.name+' '+row.publicId).toLocaleLowerCase().includes(query)).sort((a,b)=>a.name.localeCompare(b.name));
-  if(!rows.length)list.append(text('p',library.clients.length?'Ничего не найдено.':'Добавьте первого клиента.','account-empty'));
-  for(const row of rows){const card=document.createElement('article');card.className='card library-item';card.append(text('h2',row.name),text('p',(row.publicId||'Без публичного ID')+' · '+row.currency,'hint'));
-   const actions=document.createElement('div');actions.className='library-actions';actions.append(button('Новая выписка по счёту',()=>switchTo('account',{clientName:row.name,publicId:row.publicId,clientId:'',accountId:'',currency:row.currency,date:new Date().toLocaleDateString('en-CA'),cash:[],crypto:[],transactions:[]})),button('Новая выписка по сделкам',()=>switchTo('editor',{...current('editor'),clientName:row.name,clientId:row.publicId,trades:''})),button('Изменить',()=>{editingClient=row.id;$('library-client-name').value=row.name;$('library-client-id').value=row.publicId;const select=$('library-client-currency');if(![...select.options].some(option=>option.value===row.currency))select.add(new Option(row.currency,row.currency));select.value=row.currency;$('client-form-title').textContent='Редактирование клиента';$('client-cancel').hidden=false;$('library-client-name').focus();}),button('Удалить',()=>removeRecord('clients',row.id)));
+  $('client-total').textContent=library.clients.length;
+  if(!rows.length)emptyState(list,Boolean(query),'clients');
+  for(const row of rows){const card=document.createElement('article');card.className='card library-item';card.classList.add('client-item');const avatar=text('span',row.name.split(/\s+/).slice(0,2).map(part=>part[0]).join('').toUpperCase(),'library-avatar');card.append(identity(row.name,row.publicId||'Без публичного ID',avatar));
+   const actions=document.createElement('div');actions.className='library-actions';actions.append(text('span',row.currency,'library-currency'),button('Выписка по счёту',()=>switchTo('account',{clientName:row.name,publicId:row.publicId,clientId:'',accountId:'',currency:row.currency,date:new Date().toLocaleDateString('en-CA'),cash:[],crypto:[],transactions:[]})),moreMenu([button('Новая выписка по сделкам',()=>switchTo('editor',{...current('editor'),clientName:row.name,clientId:row.publicId,trades:''})),button('Изменить',()=>{editingClient=row.id;$('library-client-name').value=row.name;$('library-client-id').value=row.publicId;const select=$('library-client-currency');if(![...select.options].some(option=>option.value===row.currency))select.add(new Option(row.currency,row.currency));select.value=row.currency;$('client-form-title').textContent='Редактирование клиента';$('client-cancel').hidden=false;$('library-client-name').focus();}),button('Удалить',()=>removeRecord('clients',row.id),'library-delete')]));
    card.append(actions);list.append(card);
   }
  }
  for(const type of core.types){
   const root=$('page-'+type),heading=root.querySelector('.editor-heading');
   const bar=document.createElement('div');bar.className='draft-toolbar';
-  const input=document.createElement('input');input.id='draft-name-'+type;input.maxLength=120;input.placeholder='Название черновика';input.setAttribute('aria-label','Название черновика');input.value=library.drafts.find(row=>row.id===active(type))?.name||'';
+  const input=document.createElement('input');input.type='text';input.id='draft-name-'+type;input.maxLength=120;input.placeholder='Название черновика';input.setAttribute('aria-label','Название черновика');input.value=library.drafts.find(row=>row.id===active(type))?.name||'';
   const status=text('span','Сохраните черновик, чтобы включить автосохранение.','hint');status.id='draft-status-'+type;
   bar.append(input,button('Сохранить черновик',()=>saveDraft(type)),button('Сохранить копию',()=>saveDraft(type,true)),status);heading.after(bar);
   root.addEventListener('input',event=>{if(!active(type))return;clearTimeout(autoTimer);status.textContent='Сохраняю…';autoTimer=setTimeout(()=>saveDraft(type,false,true),700);});
   root.addEventListener('click',event=>{if(event.target.closest('[data-account-add],[data-remove],#mail-logo-remove,[data-mail-format],#mail-footer-enabled')){clearTimeout(autoTimer);autoTimer=setTimeout(()=>saveDraft(type,false,true),700);}});
  }
  document.addEventListener('estratto:navigate',()=>{for(const type of core.types)if(active(type))saveDraft(type,false,true);render();});
+ document.addEventListener('click',event=>document.querySelectorAll('.library-more[open]').forEach(menu=>{if(!menu.contains(event.target))menu.open=false;}));
+ document.addEventListener('keydown',event=>{if(event.key==='Escape')document.querySelectorAll('.library-more[open]').forEach(menu=>{menu.open=false;menu.querySelector('summary').focus();});});
  $('draft-search').addEventListener('input',renderDrafts);$('draft-filter').addEventListener('change',renderDrafts);$('client-search').addEventListener('input',renderClients);
  function render(){renderDrafts();renderClients();$('backup-summary').textContent=library.clients.length+' клиентов · '+library.drafts.length+' черновиков';}
  $('backup-download').addEventListener('click',()=>{try{flush();if(!localStorage.getItem(key)&&!write(library))return;const backup=core.capture(localStorage);const url=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='estratto-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notice('Резервная копия скачана.');}catch(_){notice('Не удалось создать резервную копию. Проверьте доступность хранилища браузера.',true);}});
