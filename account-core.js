@@ -66,6 +66,10 @@
     fee: 'Commissione', result: 'Risultato di trading', interest: 'Interessi', adjustment: 'Rettifica', other: 'Altro'
   };
   const statuses = { approved:'Approvato', pending:'In attesa di approvazione', failed:'Non riuscito', rejected:'Rifiutato', cancelled:'Annullato' };
+  function selectedTransactions(state){
+    const scope=state.transactionsScope||'all';
+    return (state.transactions||[]).map((row,index)=>({row,index})).filter(({row})=>scope!=='none'&&(scope==='deposits'?row.type==='deposit':scope==='withdrawals'?row.type==='withdrawal':true));
+  }
   function validate(state) {
     const issues = [], assets = { cash: [], crypto: [] }, transactions = [];
     const add = (path, message) => issues.push({ path, message });
@@ -75,6 +79,7 @@
       else if (text.length > max) add(path, `${label}: не более ${max} символов.`);
       return text;
     };
+    if(!['all','deposits','withdrawals','none'].includes(state.transactionsScope||'all'))add('transactionsScope','Выберите состав выписки.');
     const clientName = required(state.clientName, 'Имя клиента', 80, 'clientName');
     const clientId = '';
     const accountId = String(state.accountId||''); // Retain legacy account numbers without relabelling them as public IDs.
@@ -103,11 +108,11 @@
         if (issues.length === start) assets[group].push({ asset, symbol, wallet, quantity:quantity.text, amount:quantity.text, price:price.text, value:productMoney(quantity,price) });
       });
     }
-    if (!(state.cash || []).length && !(state.crypto || []).length) {
-      add('assets', 'Добавьте денежный остаток или криптоактив. Для нулевого счёта укажите количество 0.');
+    if (!(state.cash || []).length && !(state.crypto || []).length && !selectedTransactions(state).length) {
+      add('assets', 'Добавьте остаток счёта или операции выбранного типа. Для нулевого остатка укажите 0.');
     }
     const references = new Map();
-    (state.transactions || []).forEach((row, index) => {
+    selectedTransactions(state).forEach(({row,index}) => {
       const start = issues.length, path = key => `transactions.${index}.${key}`;
       if(row.sourceClient && clientName && String(row.sourceClient).trim().toLowerCase().replace(/\s+/g,' ')!==clientName.toLowerCase().replace(/\s+/g,' ') && !issues.some(issue=>issue.path==='clientName'))add('clientName', `Депозит ${row.sourceReference||row.reference||index+1} принадлежит клиенту ${row.sourceClient}. Проверьте имя клиента и состав операций.`);
       if (!validDate(row.date || '')) add(path('date'), 'Укажите корректную дату операции.');
@@ -136,8 +141,8 @@
       if (issues.length === start) transactions.push({ date:row.date, type:row.type, description, amount, currency:unit, reference, status, sourceCreated:row.sourceCreated||'' });
     });
     const total = group => assets[group].reduce((sum,row) => sum+row.value,0n);
-    return { errors:issues.map(issue => issue.message), issues, clientName, clientId, accountId, publicId, date:state.date, currency, ...assets, transactions:sortTransactions(transactions),
-      cashTotal:total('cash'), cryptoTotal:total('crypto'), total:total('cash')+total('crypto') };
+    return { errors:issues.map(issue => issue.message), issues, clientName, clientId, accountId, publicId, date:state.date, currency, transactionsScope:state.transactionsScope||'all', ...assets, transactions:sortTransactions(transactions),
+      cashTotal:total('cash'), cryptoTotal:total('crypto'), total:(state.cash||[]).length+(state.crypto||[]).length?total('cash')+total('crypto'):null };
   }
   // Preview incomplete forms without treating unknown numbers as zero.
   // Missing or invalid numbers remain unknown, rather than becoming zero.
@@ -158,7 +163,7 @@
     const sum = rows => rows.some(row => row.value === null) ? null : rows.reduce((total,row) => total + row.value,0n);
     const cashTotal = cash.length || crypto.length ? sum(cash) : null, cryptoTotal = cash.length || crypto.length ? sum(crypto) : null;
     const total = !cash.length && !crypto.length || cashTotal === null || cryptoTotal === null ? null : cashTotal + cryptoTotal;
-    const transactions = (state.transactions || []).map(row => {
+    const transactions = selectedTransactions(state).map(({row}) => {
       let amount = null;
       try { amount = toMoney(decimal(row.amount)); } catch (_) {}
       return { date:validDate(row.date || '') ? row.date : '', type:row.type, description:text(row.description,300),
@@ -166,5 +171,5 @@
     });
     return { ...model, cash, crypto, transactions:sortTransactions(transactions), cashTotal, cryptoTotal, total, draft:true };
   }
-  return { cashRow, decimal, toMoney, productMoney, money, validDate, validate, preview, sortTransactions, types, statuses };
+  return { selectedTransactions, cashRow, decimal, toMoney, productMoney, money, validDate, validate, preview, sortTransactions, types, statuses };
 });

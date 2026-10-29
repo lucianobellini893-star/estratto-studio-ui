@@ -10,8 +10,8 @@
 <script src="vendor/qrcode.js"></script>
 <script src="vendor/pdf.min.js"></script>
 <script src="vendor/pdf.worker.min.js"></script>
-<script src="logo-composer.js?v=20261026-history-sync"></script>
-<link rel="stylesheet" href="interface.css?v=20261026-history-sync">
+<script src="logo-composer.js?v=20261029-account-scope"></script>
+<link rel="stylesheet" href="interface.css?v=20261029-account-scope">
 </head>
 <body>
 
@@ -197,6 +197,7 @@
      <div class="controls">
       <section class="card" aria-labelledby="ac-mode-heading">
        <h2 id="ac-mode-heading"><span class="step">1</span>Способ заполнения</h2>
+       <label class="f">Что включить в выписку<select id="ac-transactions-scope" data-account-field="transactionsScope"><option value="all">Остатки и все операции</option><option value="deposits">Только депозиты (остаток необязателен)</option><option value="withdrawals">Только выводы (остаток необязателен)</option><option value="none">Только остатки — без операций</option></select></label>
        <div class="seg account-mode" role="group" aria-label="Способ заполнения выписки по счёту">
         <button type="button" id="ac-mode-manual" aria-pressed="true">Ручной ввод</button>
         <button type="button" id="ac-mode-deposits" aria-pressed="false">Автоматически / CRM</button>
@@ -1581,16 +1582,16 @@ renderLogoParts();
   if(['#editor','#account','#mail','#drafts','#clients','#backup','#history','#templates'].includes(location.hash))navigate(location.hash.slice(1));
 })();
 </script>
-<script src="account-assets.js?v=20261026-history-sync"></script>
-<script src="account-core.js?v=20261026-history-sync"></script>
-<script src="account-picker.js?v=20261026-history-sync"></script>
-<script src="account-deposits.js?v=20261026-history-sync"></script>
-<script src="account-numbers.js?v=20261026-history-sync"></script>
-<script src="account.js?v=20261026-history-sync"></script>
-<script src="account-import.js?v=20261026-history-sync"></script>
-<script src="mail-core.js?v=20261026-history-sync"></script>
-<script src="mail.js?v=20261026-history-sync"></script>
-<script src="workspace-core.js?v=20261026-history-sync"></script>
-<script src="workspace.js?v=20261026-history-sync"></script>
+<script src="account-assets.js?v=20261029-account-scope"></script>
+<script src="account-core.js?v=20261029-account-scope"></script>
+<script src="account-picker.js?v=20261029-account-scope"></script>
+<script src="account-deposits.js?v=20261029-account-scope"></script>
+<script src="account-numbers.js?v=20261029-account-scope"></script>
+<script src="account.js?v=20261029-account-scope"></script>
+<script src="account-import.js?v=20261029-account-scope"></script>
+<script src="mail-core.js?v=20261029-account-scope"></script>
+<script src="mail.js?v=20261029-account-scope"></script>
+<script src="workspace-core.js?v=20261029-account-scope"></script>
+<script src="workspace.js?v=20261029-account-scope"></script>
 </body>
 </html>

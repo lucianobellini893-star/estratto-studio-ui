@@ -6,7 +6,7 @@
   const storeKey = 'estratto-conto.v1';
   const now = new Date();
   const today = [now.getFullYear(), String(now.getMonth()+1).padStart(2,'0'), String(now.getDate()).padStart(2,'0')].join('-');
-  const initial = { clientName:'', clientId:'', accountId:'', publicId:'', date:today, currency:'EUR', cash:[], crypto:[], transactions:[] };
+  const initial = { clientName:'', clientId:'', accountId:'', publicId:'', date:today, currency:'EUR', transactionsScope:'all', cash:[], crypto:[], transactions:[] };
   let state = { ...initial };
   try {
     const saved = JSON.parse(localStorage.getItem(storeKey));
@@ -67,7 +67,7 @@
     picker.close();
     const container = $(`ac-${group}-rows`); container.replaceChildren();
     if (!state[group].length) {
-      container.append(node('p','account-empty',group==='transactions' ? 'Операции пока не добавлены. Без них PDF будет содержать пометку «Данные об операциях не предоставлены».' : 'Остатки пока не добавлены.'));
+      container.append(node('p','account-empty',group==='transactions' ? 'Операции необязательны. Если их нет, таблицы операций в PDF не будет.' : 'Остатки пока не добавлены.'));
     }
     state[group].forEach((row,index) => {
       const article=node('div','account-entry'), header=node('div','account-entry-heading');
@@ -75,6 +75,7 @@
       const remove=node('button','account-remove','Удалить'); remove.type='button'; remove.dataset.remove=group; remove.dataset.index=index;
       remove.setAttribute('aria-label',`Удалить ${group==='transactions'?'операцию':'актив'} ${index+1}`);
       header.append(remove); article.append(header);
+      if(group==='transactions')article.hidden=!core.selectedTransactions(state).some(item=>item.index===index);
       const row1=node('div','row'), row2=node('div','row');
       if (group==='transactions') {
         row1.append(field(group,index,'date','Дата',{date:true}),field(group,index,'type','Тип операции',{select:true}));
@@ -93,7 +94,7 @@
       }
       container.append(article);
     });
-    $(`ac-${group}-count`).textContent = state[group].length;
+    $(`ac-${group}-count`).textContent = group==='transactions'?core.selectedTransactions(state).length:state[group].length;
   }
   function updateSummary(model) {
     const valid = model.cash.length===state.cash.length && model.crypto.length===state.crypto.length && (model.cash.length+model.crypto.length)>0;
@@ -184,11 +185,11 @@
       const foreignCash=model.cash.some(row=>row.symbol!==model.currency);
       const cashColumns=(foreignCash?[['VALUTA',80],['PORTAFOGLIO',55],['SALDO',60,true],[`CONTROVALORE (${model.currency})`,70,true]]:[['VALUTA',90],['PORTAFOGLIO',85],[`SALDO (${model.currency})`,90,true]]).map(([label,width,right])=>({label,width,right}));
       const cashRows=model.cash.map(row=>({cells:[`${row.asset} (${row.symbol})`,row.wallet,...(foreignCash?[row.amount==='—'?'—':core.money(core.toMoney(core.decimal(row.amount)))+' '+row.symbol]:[]),row.value===null?'—':core.money(row.value)]}));
-      table('Disponibilità liquide',cashColumns,cashRows,model.cashTotal,'Disponibilità liquide non indicate.');
-      table('Criptoattività',assetColumns,assetRows(model.crypto),model.cryptoTotal,'Criptoattività non indicate.');
+      if(model.cash.length)table('Disponibilità liquide',cashColumns,cashRows,model.cashTotal,'Disponibilità liquide non indicate.');
+      if(model.crypto.length)table('Criptoattività',assetColumns,assetRows(model.crypto),model.cryptoTotal,'Criptoattività non indicate.');
       const txColumns=[['DATA',26],['OPERAZIONE',34],['DESCRIZIONE',67],['IMPORTO',34,true],['VALUTA',20],['STATO',42],['RIFERIMENTO',42]].map(([label,width,right])=>({label,width,right}));
       const date=value=>value?value.split('-').reverse().join('/'):'—';
-      table('Movimenti del conto',txColumns,model.transactions.map(r=>({cells:[date(r.date),core.types[r.type]||'—',r.description||'—',r.amount===null?'—':core.money(r.amount,true),r.currency,core.statuses[r.status||'approved']||'—',r.reference||'—'],amount:r.amount,amountIndex:3,status:r.status||'approved',statusIndex:5})),undefined,'Dati sui movimenti non forniti.');
+      if(model.transactions.length)table(model.transactionsScope==='deposits'?'Versamenti':model.transactionsScope==='withdrawals'?'Prelievi':'Movimenti del conto',txColumns,model.transactions.map(r=>({cells:[date(r.date),core.types[r.type]||'—',r.description||'—',r.amount===null?'—':core.money(r.amount,true),r.currency,core.statuses[r.status||'approved']||'—',r.reference||'—'],amount:r.amount,amountIndex:3,status:r.status||'approved',statusIndex:5})),undefined,'Dati sui movimenti non forniti.');
 
     };
   }
@@ -196,7 +197,7 @@
     try {
       const profile=shared.collectProfile();
       const data={...profile,mode:'conto',trades:[],clientName:model.clientName||'—',clientId:model.clientId||'—',publicId:model.publicId||'—',
-        accountBalance:(model.total===null?'—':core.money(model.total))+' '+(model.currency||'—'),accountCurrency:model.currency||'—',
+        accountBalance:model.total===null?'':core.money(model.total)+' '+(model.currency||'—'),accountCurrency:model.currency||'—',
         referenceDate:core.validDate(model.date||'')?model.date.split('-').reverse().join('/'):'—',toIso:model.date,
         disclaimer:'Il presente documento riepiloga le disponibilità e i movimenti del conto alla data indicata, sulla base dei dati forniti. La valorizzazione degli attivi è espressa nella valuta di riferimento. I movimenti mantengono la propria valuta e non vengono sommati nuovamente al saldo. Documento riservato al cliente; non costituisce consulenza finanziaria.'};
       const result=await shared.buildPdf(data,drawContent(model));
@@ -243,6 +244,7 @@
     if(input.dataset.accountField){
       state[input.dataset.accountField]=input.value;
       if(input.dataset.accountField==='currency'){renderRows('cash');renderRows('crypto');}
+      if(input.dataset.accountField==='transactionsScope')renderRows('transactions');
       persist();invalidate();
     }
     else if(input.dataset.group){state[input.dataset.group][Number(input.dataset.index)][input.dataset.field]=input.dataset.numericInput?input.dataset.numericValue:input.value;persist();invalidate();}
@@ -254,7 +256,7 @@
     if(add){
       const group=add.dataset.accountAdd;
       if(state[group].length>=1000)return;
-      state[group].push(group==='transactions'?{date:state.date,type:'deposit',amount:'',currency:state.currency,description:'',reference:'',status:'approved'}:group==='cash'?{asset:catalog.findBySymbol('cash',state.currency)?.name||state.currency,symbol:state.currency,wallet:'Trading',amount:'',price:'1'}:{asset:'',symbol:'',wallet:'Spot',quantity:'',price:''});
+      state[group].push(group==='transactions'?{date:state.date,type:state.transactionsScope==='withdrawals'?'withdrawal':'deposit',amount:'',currency:state.currency,description:'',reference:'',status:'approved'}:group==='cash'?{asset:catalog.findBySymbol('cash',state.currency)?.name||state.currency,symbol:state.currency,wallet:'Trading',amount:'',price:'1'}:{asset:'',symbol:'',wallet:'Spot',quantity:'',price:''});
       renderRows(group);persist();invalidate();$(`ac-${group}-${state[group].length-1}-${group==='transactions'?'date':'asset'}`).focus();
     }
     if(remove){
@@ -281,7 +283,7 @@
   window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(lastPdf&&$('page-account').classList.contains('active'))renderPreview(lastPdf).catch(()=>{});},250);});
   $('ac-download').addEventListener('click',async()=>{
     attemptedDownload=true;
-    if(importIssue){
+    if(importIssue&&state.transactionsScope!=='none'){
       const source=$(importIssueTarget)||$('ac-deposit-source');source.setAttribute('aria-invalid','true');
       $('ac-deposit-error').textContent=importIssue;$('ac-deposit-error').hidden=false;
       source.scrollIntoView({block:'center',behavior:'instant'});source.focus({preventScroll:true});return;

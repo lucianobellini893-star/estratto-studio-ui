@@ -6,7 +6,8 @@
   const sources=[{id:'ac-deposit-source',type:'deposit',label:'Депозиты'},{id:'ac-withdrawal-source',type:'withdrawal',label:'Выводы'}];
   let parsed=null,timer,automatic=false,appliedKey='';
   const node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
-  const hasSource=()=>sources.some(source=>$(source.id).value.trim());
+  const enabledSources=()=>sources.filter(source=>form.get().transactionsScope!=='none'&&(form.get().transactionsScope==='deposits'?source.type==='deposit':form.get().transactionsScope==='withdrawals'?source.type==='withdrawal':true));
+  const hasSource=()=>enabledSources().some(source=>$(source.id).value.trim());
   function fail(message,target='ac-deposit-source'){
     $('ac-deposit-error').textContent=message;$('ac-deposit-error').hidden=false;
     $(target).setAttribute('aria-invalid','true');
@@ -15,12 +16,15 @@
   function mode(importing){
     automatic=importing;
     $('ac-mode-manual').setAttribute('aria-pressed',String(!importing));$('ac-mode-deposits').setAttribute('aria-pressed',String(importing));
-    $('ac-deposit-import').hidden=!importing;$('ac-manual-operations').hidden=importing;
+    const balancesOnly=form.get().transactionsScope==='none';
+    $('ac-deposit-import').hidden=!importing||balancesOnly;$('ac-manual-operations').hidden=importing||balancesOnly;
+    for(const source of sources)$(source.id).closest('label').hidden=!enabledSources().includes(source);
+    if(balancesOnly){form.setImportIssue('');$('ac-mode-hint').textContent='Выписка только с остатками. Операции не нужны и не попадут в PDF.';return;}
     $('ac-mode-hint').textContent=importing?'Вставьте депозиты и выводы в отдельные поля — история объединится и отсортируется автоматически.':'Добавляйте операции вручную или вставьте историю в автоматическом режиме.';
     if(importing){
-      form.setImportIssue(hasSource()?'Проверяю вставленные истории. Дождитесь результата.':'Вставьте историю депозитов и/или выводов.');
+      form.setImportIssue(hasSource()?'Проверяю вставленные истории. Дождитесь результата.':'');
       if(hasSource())parse();
-      $('ac-deposit-source').scrollIntoView({block:'center',behavior:'instant'});$('ac-deposit-source').focus({preventScroll:true});
+      const first=enabledSources()[0];if(first){$(first.id).scrollIntoView({block:'center',behavior:'instant'});$(first.id).focus({preventScroll:true});}
     } else form.setImportIssue('');
   }
   function availability(){
@@ -51,7 +55,7 @@
     if(!parsed||availability())return;
     try{
       if(!parsed.transactions.length)throw new Error('В историях не найдено операций.');
-      const key=JSON.stringify(sources.map(source=>$(source.id).value))+'|'+$('ac-deposit-replace').checked;
+      const key=JSON.stringify(enabledSources().map(source=>$(source.id).value))+'|'+$('ac-deposit-replace').checked;
       if(key===appliedKey){form.setImportIssue('');renderTable(form.get().transactions);$('ac-deposit-success').textContent='Общая история актуальна. Операций в выписке: '+form.get().transactions.length+'.';$('ac-deposit-success').hidden=false;return;}
       const result=form.importOperations(parsed.transactions,$('ac-deposit-replace').checked);
       appliedKey=key;form.setImportIssue('');sources.forEach(source=>$(source.id).removeAttribute('aria-invalid'));
@@ -63,7 +67,7 @@
   function parse(){
     clearTimeout(timer);parsed=null;$('ac-deposit-success').hidden=true;$('ac-deposit-result').hidden=true;$('ac-deposit-error').hidden=true;
     const reports=[];
-    for(const source of sources){
+    for(const source of enabledSources()){
       $(source.id).removeAttribute('aria-invalid');
       $(source.id+'-status').textContent='Пока не вставлено.';
       if(!$(source.id).value.trim())continue;
@@ -72,7 +76,7 @@
         $(source.id+'-status').textContent=`Распознано: ${report.transactions.length}. Клиент: ${report.clientName}.`;
       }catch(e){const message=source.label+': '+e.message;$(source.id+'-status').textContent=message;fail(message,source.id);return;}
     }
-    if(!reports.length){appliedKey='';if(automatic)form.setImportIssue('Вставьте историю депозитов и/или выводов.');return;}
+    if(!reports.length){appliedKey='';form.setImportIssue('');$('ac-deposit-conflict').hidden=true;return;}
     const clients=new Set(reports.filter(report=>report.transactions.length).map(report=>parser.normalize(report.clientName)));
     if(clients.size>1){fail('Депозиты и выводы принадлежат разным клиентам. Для одной выписки вставьте обе истории одного клиента.','ac-withdrawal-source');return;}
     const counts={approved:0,pending:0,failed:0,rejected:0,cancelled:0};
@@ -85,6 +89,7 @@
     renderTable(parsed.transactions);$('ac-deposit-result').hidden=false;
     if(automatic)apply();else availability();
   }
+  $('ac-transactions-scope').addEventListener('change',()=>{appliedKey='';parsed=null;mode(automatic);});
   $('ac-mode-manual').addEventListener('click',()=>mode(false));$('ac-mode-deposits').addEventListener('click',()=>mode(true));
   $('ac-import-deposits-link').addEventListener('click',()=>mode(true));
   $('ac-edit-imported').addEventListener('click',()=>{mode(false);$('ac-manual-operations').scrollIntoView({block:'start',behavior:'instant'});});
@@ -96,4 +101,5 @@
   $('ac-client-name').addEventListener('input',()=>{if(parsed&&automatic)apply();else availability();});
   $('ac-deposit-replace').addEventListener('change',()=>{appliedKey='';if(parsed&&automatic)apply();});
   $('ac-deposit-use-client').addEventListener('click',()=>{if(parsed){form.setClient(parsed.clientName);apply();}});
+  mode(false);
 })();

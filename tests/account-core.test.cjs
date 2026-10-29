@@ -158,3 +158,13 @@ test('legacy cash migration preserves previous valued balance and is idempotent'
  const invalid=core.cashRow(asset({price:'bad'}),'EUR');assert.equal(invalid.amount,'');
  assert.ok(core.validate(state({currency:'EUR',cash:[invalid]})).issues.some(issue=>issue.path==='cash.0.amount'));
 });
+test('deposits-only statement does not require withdrawals or a fabricated balance',()=>{
+ const deposit={date:'2026-07-29',type:'deposit',amount:'1000',currency:'EUR',reference:'117908'};
+ const input=state({cash:[],transactionsScope:'deposits',transactions:[deposit,{type:'withdrawal',amount:'bad'}]});
+ const result=core.validate(input);assert.deepEqual(result.errors,[]);assert.equal(result.transactions.length,1);assert.equal(result.total,null);
+ assert.equal(core.preview(input).transactions.length,1);
+});
+test('balance-only statement ignores saved unfinished operations without deleting them',()=>{
+ const input=state({transactionsScope:'none',transactions:[{type:'deposit',amount:'bad',sourceClient:'Another client'}]});
+ assert.deepEqual(core.validate(input).errors,[]);assert.equal(core.validate(input).transactions.length,0);assert.equal(core.preview(input).transactions.length,0);assert.equal(input.transactions.length,1);
+});
