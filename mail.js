@@ -6,6 +6,7 @@
   const state={title:'',text:'',logoUrl:'',logoHeight:32,layout:'horizontal',parts:[],footerEnabled:false,footerLabel:'Powered by',footerCompany:'',...saved,logoData:''};
   if(!Array.isArray(state.parts))state.parts=[];
   state.parts=state.parts.slice(0,4);let sequence=0,busy=false,timer;
+  const options={fontBase:new URL('fonts/',location.href).href};
   let interactiveSvg='',logoUnits=[],logoSelection=[];
   const shapeSelector='path,rect,circle,ellipse,polygon,polyline,line,text,use';
   const hexColor=value=>{
@@ -95,6 +96,25 @@
     $('mail-logo-download').disabled=!state.logoData||busy;
     mountEditableLogo();
   }
+  function applyMailColor(color){
+    if(!logoSelection.length){
+      $('mail-logo-sel-info').textContent='Сначала выберите часть логотипа или существующий цвет.';
+      return;
+    }
+    for(const key of logoSelection){
+      const item=logoUnits.find(unit=>unit.key===key);if(!item)continue;
+      const part=state.parts.find(part=>part.id===item.partId);if(!part)continue;
+      part.fills=part.fills||{};part.fills[item.index]=color.toUpperCase();
+    }
+    preferEditedLogo();renderLogo();
+  }
+  $('mail-logo-stage').addEventListener('click',()=>{logoSelection=[];drawLogoSelection();});
+  document.querySelectorAll('[data-mail-logo-color]').forEach(button=>button.addEventListener('click',()=>applyMailColor(button.dataset.mailLogoColor)));
+  $('mail-logo-picker').addEventListener('input',event=>applyMailColor(event.target.value));
+  $('mail-logo-reset-colors').addEventListener('click',()=>{
+    state.parts.forEach(part=>{delete part.color;part.fills={};});
+    logoSelection=[];preferEditedLogo();partsUI();renderLogo();
+  });
   function preferEditedLogo(){
     if(state.logoUrl){state.logoUrl='';$('mail-logo-url').value='';}
   }
