@@ -308,6 +308,26 @@
     get:()=>JSON.parse(JSON.stringify(state)),
     setImportIssue:(message,target='ac-deposit-source')=>{importIssue=String(message||'');importIssueTarget=target;},
     setClient:name=>{state.clientName=name;$('ac-client-name').value=name;persist();invalidate();},
+    // CRM paste is a complete source-of-truth snapshot, not an append.
+    // Keep a local recovery copy before replacing any existing operations.
+    replaceOperations:(rows)=>{
+      if(!Array.isArray(rows)||!rows.length)throw new Error('Нет операций для переноса.');
+      const client=String(rows[0].sourceClient||'').trim();
+      if(!client||rows.some(row=>window.EstrattoDeposits.normalize(row.sourceClient)!==window.EstrattoDeposits.normalize(client))){
+        throw new Error('В истории операции разных клиентов. Импорт отменён.');
+      }
+      const replacement=core.sortTransactions(rows.map(row=>({...row})));
+      const previous=state.transactions;
+      const changed=JSON.stringify(previous)!==JSON.stringify(replacement);
+      if(changed&&previous.length){
+        try{localStorage.setItem('estratto-conto.previous-transactions.v1',JSON.stringify({savedAt:new Date().toISOString(),clientName:state.clientName,transactions:previous}));}catch(_){}
+      }
+      state.transactions=replacement;
+      state.clientName=client;
+      $('ac-client-name').value=client;
+      renderRows('transactions');persist();invalidate();
+      return {transactions:replacement,replaced:changed?previous.length:0,added:replacement.length};
+    },
     importOperations:(rows,replace=false)=>{
       const client=rows[0]?.sourceClient||'';
       if(!rows.length)throw new Error('Нет операций для добавления.');
