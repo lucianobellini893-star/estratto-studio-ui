@@ -19,6 +19,9 @@
     if(source){const img=new Image();img.src=source;img.alt='Логотип письма';const size=core.dimensions(state);img.width=size.width;img.height=size.height;stage.append(img);}
     else {const span=document.createElement('span');span.className='dim';span.textContent=busy?'Подготовка логотипа…':'Загрузите свой SVG — логотип появится слева над письмом.';stage.append(span);}
   }
+  function preferEditedLogo(){
+    if(state.logoUrl){state.logoUrl='';$('mail-logo-url').value='';}
+  }
   function partsUI(){
     $('mail-logo-add-wrap').hidden=!state.parts.length||state.parts.length>=4;
     $('mail-logo-remove').hidden=!state.parts.length;
@@ -30,14 +33,14 @@
       const label=document.createElement('label');label.className='f';label.textContent=part.name||'Часть '+(index+1);
       const range=document.createElement('input');range.type='range';range.min=25;range.max=200;range.value=part.scale||100;range.setAttribute('aria-label','Масштаб: '+label.textContent);
       const output=document.createElement('output');output.textContent=range.value+'%';
-      range.addEventListener('input',()=>{part.scale=Number(range.value);output.textContent=range.value+'%';renderLogo();});label.append(range,output);
+      range.addEventListener('input',()=>{part.scale=Number(range.value);output.textContent=range.value+'%';preferEditedLogo();renderLogo();});label.append(range,output);
       const colorLabel=document.createElement('label');colorLabel.className='f';colorLabel.textContent='Цвет части';
       const color=document.createElement('input');color.type='color';color.value=/^#[0-9a-f]{6}$/i.test(part.color||'')?part.color:'#202020';
       color.setAttribute('aria-label','Цвет: '+(part.name||'часть '+(index+1)));
-      color.addEventListener('input',()=>{part.color=color.value;renderLogo();});
+      color.addEventListener('input',()=>{part.color=color.value;preferEditedLogo();renderLogo();});
       colorLabel.append(color);
       const original=document.createElement('button');original.type='button';original.className='btn small';
-      original.textContent='Исходные цвета';original.addEventListener('click',()=>{delete part.color;partsUI();renderLogo();});
+      original.textContent='Исходные цвета';original.addEventListener('click',()=>{delete part.color;preferEditedLogo();partsUI();renderLogo();});
       const remove=document.createElement('button');remove.type='button';remove.className='btn small';remove.textContent='Удалить часть';
       remove.addEventListener('click',()=>{state.parts.splice(index,1);partsUI();renderLogo();});
       row.append(label,colorLabel,original,remove);list.append(row);
@@ -58,7 +61,7 @@
               if(!/^(none|transparent)$/i.test(fill.trim())&&!['line','polyline'].includes(shape.localName)){
                 shape.style.setProperty('fill',color,'important');
               }
-              if(stroke&&!/^(none|transparent)$/i.test(stroke.trim())){
+              if((stroke||['line','polyline'].includes(shape.localName))&&!/^(none|transparent)$/i.test(stroke.trim())){
                 shape.style.setProperty('stroke',color,'important');
               }
             }
@@ -135,7 +138,7 @@
   $('mail-logo-file').addEventListener('change',event=>upload(event.target,false));
   $('mail-logo-add').addEventListener('change',event=>upload(event.target,true));
   $('mail-logo-remove').addEventListener('click',()=>{state.parts=[];partsUI();renderLogo();});
-  $('mail-logo-layout').addEventListener('change',()=>{state.layout=$('mail-logo-layout').value;renderLogo();});
+  $('mail-logo-layout').addEventListener('change',()=>{state.layout=$('mail-logo-layout').value;preferEditedLogo();renderLogo();});
   function ready(){
     const issues=core.validate(state);document.querySelectorAll('#page-mail [aria-invalid]').forEach(el=>el.removeAttribute('aria-invalid'));
     if(issues.length){for(const issue of issues)$(issue.field).setAttribute('aria-invalid','true');$(issues[0].field).focus();message('mail-export-message',issues[0].message,true);return false;}
