@@ -32,7 +32,7 @@
     const conflict=parsed?.transactions.length&&current.trim()&&parser.normalize(current)!==parser.normalize(parsed.clientName);
     $('ac-deposit-conflict').hidden=!conflict;
     if(conflict){
-      const message=`В отчёте: ${parsed.clientName}. В выписке: ${current}. Подтвердите клиента кнопкой ниже — данные применятся автоматически.`;
+      const message=`В отчёте: ${parsed.clientName}. В выписке: ${current}. При автоматическом импорте клиент будет взят из отчёта CRM.`;
       $('ac-deposit-conflict-text').textContent=message;if(automatic)form.setImportIssue(message);
     }
     return Boolean(conflict);
@@ -52,16 +52,16 @@
     table.append(body);
   }
   function apply(){
-    if(!parsed||availability())return;
+    if(!parsed)return;
     try{
       if(!parsed.transactions.length)throw new Error('В историях не найдено операций.');
-      const key=JSON.stringify(enabledSources().map(source=>$(source.id).value))+'|'+$('ac-deposit-replace').checked;
+      const key=JSON.stringify(enabledSources().map(source=>$(source.id).value));
       if(key===appliedKey){form.setImportIssue('');renderTable(form.get().transactions);$('ac-deposit-success').textContent='Общая история актуальна. Операций в выписке: '+form.get().transactions.length+'.';$('ac-deposit-success').hidden=false;return;}
-      const result=form.importOperations(parsed.transactions,$('ac-deposit-replace').checked);
+      const result=form.replaceOperations(parsed.transactions);
       appliedKey=key;form.setImportIssue('');sources.forEach(source=>$(source.id).removeAttribute('aria-invalid'));
       renderTable(result.transactions);
-      $('ac-deposit-success').textContent=`История объединена и отсортирована: ${result.transactions.length} операций. Добавлено: ${result.added}; обновлено статусов: ${result.updated}; уже были в истории: ${result.skipped}.`;
-      $('ac-deposit-success').hidden=false;$('ac-deposit-error').hidden=true;availability();
+      $('ac-deposit-success').textContent=`История CRM перенесена автоматически: ${result.transactions.length} операций. Предыдущая история заменена; тестовые записи не смешиваются с импортом.`;
+      $('ac-deposit-success').hidden=false;$('ac-deposit-error').hidden=true;$('ac-deposit-conflict').hidden=true;
     }catch(e){fail(e.message);}
   }
   function parse(){
