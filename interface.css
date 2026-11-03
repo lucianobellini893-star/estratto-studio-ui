@@ -619,3 +619,11 @@ select:focus-visible { outline:2px solid #72756b; outline-offset:3px; }
 .history-item .library-actions { min-width:0; }
 @media(max-width:1250px) { .templates-layout { grid-template-columns:minmax(0,1fr); } }
 @media(max-width:760px) { .template-item.card > .library-actions { grid-row:2; grid-column:1/-1; justify-content:flex-start; padding-left:60px; } .template-dialog { padding:22px; } .template-dialog .row { grid-template-columns:minmax(0,1fr); } }
+
+/* Email SVG editor: same interactive selection pattern as trade statements. */
+.mail-logo-stage { position:relative; display:grid; place-items:center; overflow:visible; background:#fff; }
+.mail-logo-stage > svg { display:block; max-width:100%; max-height:140px; width:100%; height:auto; overflow:visible; }
+.mail-logo-stage svg path,.mail-logo-stage svg rect,.mail-logo-stage svg circle,.mail-logo-stage svg ellipse,.mail-logo-stage svg polygon,.mail-logo-stage svg polyline,.mail-logo-stage svg line,.mail-logo-stage svg text,.mail-logo-stage svg use { cursor:pointer; }
+#mail-logo-tools { margin:8px 0 18px; }
+#mail-logo-tools .sel-info { color:var(--muted); font-size:12px; }
+#mail-logo-colors .sw { min-width:26px; min-height:26px; border:1px solid #d5d5cf; border-radius:7px; }
