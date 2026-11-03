@@ -220,7 +220,7 @@
         <div class="deposit-import-summary"><strong id="ac-deposit-client"></strong><span id="ac-deposit-count"></span><span id="ac-deposit-totals"></span></div>
         <div class="tablebox"><table class="parsed" id="ac-deposit-preview" aria-label="Распознанные операции"></table></div>
         <div class="msg" id="ac-deposit-conflict" hidden><p id="ac-deposit-conflict-text"></p><button type="button" class="btn small" id="ac-deposit-use-client">Подставить имя клиента из отчёта</button></div>
-        <label class="deposit-replace"><input id="ac-deposit-replace" type="checkbox"> Заменять историю только по заполненным видам операций</label>
+        <input id="ac-deposit-replace" type="checkbox" checked hidden><p class="hint">Импорт автоматически заменяет прежнюю историю операций на данные из CRM. Тестовые записи не смешиваются с вашими. Перед заменой сохраняется локальная резервная копия.</p>
         <button type="button" class="btn" id="ac-edit-imported">Редактировать операции вручную</button>
        </div>
        <div class="msg" id="ac-deposit-success" role="status" hidden></div>
@@ -297,10 +297,10 @@
        <p class="hint">Выделите имя или название компании и выберите оформление. Вставленный текст получает шрифт письма.</p>
       </section>
       <section class="card" aria-labelledby="mail-logo-heading">
-       <h2 id="mail-logo-heading">Логотип письма</h2>
+       <h2 id="mail-logo-heading">Дизайн логотипа письма</h2>
        <div class="mail-logo-stage" id="mail-logo-stage"><span class="dim">Загрузите свой SVG — логотип появится слева над письмом.</span></div>
        <div class="tool-row"><label class="file-btn btn small">Загрузить SVG<input type="file" id="mail-logo-file" accept=".svg,image/svg+xml" multiple aria-label="Загрузить SVG-логотип для письма"></label><label class="file-btn btn small" id="mail-logo-add-wrap" hidden>+ Добавить часть<input type="file" id="mail-logo-add" accept=".svg,image/svg+xml" multiple aria-label="Добавить SVG-часть логотипа письма"></label><button type="button" class="btn small" id="mail-logo-remove" hidden>Убрать логотип</button></div>
-       <div id="mail-logo-composition" hidden><label class="f">Расположение частей<select id="mail-logo-layout"><option value="horizontal">Рядом</option><option value="vertical">Друг под другом</option></select></label><div id="mail-logo-parts"></div></div>
+       <p class="hint">После загрузки SVG можно менять цвет каждой части, её масштаб, расположение и общий размер. Изменения сразу видны справа в письме.</p><div id="mail-logo-composition" hidden><label class="f">Расположение частей<select id="mail-logo-layout"><option value="horizontal">Рядом</option><option value="vertical">Друг под другом</option></select></label><div id="mail-logo-parts"></div></div>
        <label class="f">Размер логотипа<input id="mail-logo-size" type="range" min="20" max="64" value="32"><output id="mail-logo-size-value">32 px</output></label>
        <details class="mail-logo-hosting"><summary>Ссылка на логотип для почты</summary><label class="f">HTTPS-ссылка на PNG или JPG (необязательно)<input id="mail-logo-url" type="url" placeholder="https://ваш-сайт.com/logo.png" autocomplete="off"></label><p class="hint">Для наиболее совместимого HTML используйте публичную ссылку на картинку. Без ссылки SVG преобразуется во встроенный PNG; его поддержка зависит от почтового клиента. Файл .eml сохраняет логотип как вложенное изображение.</p><button type="button" class="btn small" id="mail-logo-download" disabled>Скачать PNG из SVG</button></details>
        <div class="msg" id="mail-logo-message" role="status" hidden></div>
@@ -1587,8 +1587,8 @@ renderLogoParts();
 <script src="account-picker.js?v=20261029-account-scope"></script>
 <script src="account-deposits.js?v=20261029-account-scope"></script>
 <script src="account-numbers.js?v=20261029-account-scope"></script>
-<script src="account.js?v=20261029-account-scope"></script>
-<script src="account-import.js?v=20261029-account-scope"></script>
+<script src="account.js?v=20261103-auto-import"></script>
+<script src="account-import.js?v=20261103-auto-import"></script>
 <script src="mail-core.js?v=20261029-account-scope"></script>
 <script src="mail.js?v=20261029-account-scope"></script>
 <script src="workspace-core.js?v=20261029-account-scope"></script>
