@@ -43,6 +43,56 @@
     }
   }
   function mountEditableLogo(){
+    const stage=$('mail-logo-stage');stage.replaceChildren();logoUnits=[];
+    $('mail-logo-tools').hidden=!state.parts.length;
+    if(!interactiveSvg){
+      const empty=document.createElement('span');empty.className='dim';
+      empty.textContent=busy?'Подготовка логотипа…':'Загрузите SVG, чтобы выбирать элементы и менять их цвета.';
+      stage.append(empty);renderMailColors();return;
+    }
+    const parsedSvg=new DOMParser().parseFromString(interactiveSvg,'image/svg+xml').documentElement;
+    const mounted=document.importNode(parsedSvg,true);mounted.removeAttribute('width');mounted.removeAttribute('height');
+    mounted.style.width='100%';mounted.style.height='auto';mounted.style.maxHeight='140px';
+    stage.append(mounted);
+    const counts=new Map();
+    for(const element of mounted.querySelectorAll(shapeSelector)){
+      if(element.closest('defs,clipPath,mask,pattern,symbol,marker'))continue;
+      const partId=element.closest('[data-logo-part]')?.getAttribute('data-logo-part')||state.parts[0]?.id||'';
+      const index=counts.get(partId)||0;counts.set(partId,index+1);
+      const key=partId+':'+index;
+      const color=hexColor(getComputedStyle(element).fill)||hexColor(element.getAttribute('fill'));
+      if(!color)continue;
+      const unit={key,partId,index,element,color};logoUnits.push(unit);
+      element.style.cursor='pointer';
+      element.addEventListener('click',event=>{
+        event.stopPropagation();
+        if(event.shiftKey)logoSelection=[key];
+        else{
+          const rect=element.getBoundingClientRect(),y=rect.top+rect.height/2;
+          logoSelection=logoUnits.filter(other=>{
+            const b=other.element.getBoundingClientRect(),mid=b.top+b.height/2;
+            return other.partId===partId&&other.color===color&&Math.abs(mid-y)<=Math.max(3,rect.height*.35);
+          }).map(other=>other.key);
+          if(!logoSelection.includes(key))logoSelection.push(key);
+        }
+        drawLogoSelection();
+      });
+    }
+    logoSelection=logoSelection.filter(key=>logoUnits.some(unit=>unit.key===key));
+    renderMailColors();drawLogoSelection();
+  }
+  function message(id,text,error=false){
+    const box=$(id);box.textContent=text;box.hidden=!text;box.classList.toggle('error',error);
+  }
+  function persist(){
+    try{const {logoData,...draft}=state;localStorage.setItem(key,JSON.stringify(draft));}
+    catch(_){message('mail-export-message','Не удалось сохранить черновик в браузере. Скачайте HTML, чтобы сохранить письмо.',true);}
+  }
+  function refresh(){
+    $('mail-frame').srcdoc=core.build(state,{...options,preview:true,placeholder:true}).html;
+    $('mail-code').value=core.build(state,options).html;
+    $('mail-logo-size-value').textContent=state.logoHeight+' px';
+    $('mail-logo-download').disabled=!state.logoData||busy;
     mountEditableLogo();
   }
   function preferEditedLogo(){
