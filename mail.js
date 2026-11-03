@@ -31,14 +31,41 @@
       const range=document.createElement('input');range.type='range';range.min=25;range.max=200;range.value=part.scale||100;range.setAttribute('aria-label','Масштаб: '+label.textContent);
       const output=document.createElement('output');output.textContent=range.value+'%';
       range.addEventListener('input',()=>{part.scale=Number(range.value);output.textContent=range.value+'%';renderLogo();});label.append(range,output);
-      const remove=document.createElement('button');remove.type='button';remove.className='btn small';remove.textContent='Удалить часть';remove.addEventListener('click',()=>{state.parts.splice(index,1);partsUI();renderLogo();});row.append(label,remove);list.append(row);
+      const colorLabel=document.createElement('label');colorLabel.className='f';colorLabel.textContent='Цвет части';
+      const color=document.createElement('input');color.type='color';color.value=/^#[0-9a-f]{6}$/i.test(part.color||'')?part.color:'#202020';
+      color.setAttribute('aria-label','Цвет: '+(part.name||'часть '+(index+1)));
+      color.addEventListener('input',()=>{part.color=color.value;renderLogo();});
+      colorLabel.append(color);
+      const original=document.createElement('button');original.type='button';original.className='btn small';
+      original.textContent='Исходные цвета';original.addEventListener('click',()=>{delete part.color;partsUI();renderLogo();});
+      const remove=document.createElement('button');remove.type='button';remove.className='btn small';remove.textContent='Удалить часть';
+      remove.addEventListener('click',()=>{state.parts.splice(index,1);partsUI();renderLogo();});
+      row.append(label,colorLabel,original,remove);list.append(row);
     });
   }
   async function renderLogo(){
     const version=++sequence;busy=true;refresh();
     try{
       if(state.parts.length){
-        const svg=window.EstrattoLogoComposer.compose(state.parts.map(part=>({...part,svg:shared.sanitizeSvg(part.svg)})),state.layout,12);
+        const prepared=state.parts.map(part=>{
+          const svg=shared.sanitizeSvg(part.svg);
+          if(/^#[0-9a-f]{6}$/i.test(part.color||'')){
+            const color=part.color;
+            // Recolour visible SVG shapes only; keep stroke-only graphics and empty fills intact.
+            for(const shape of svg.querySelectorAll('path,rect,circle,ellipse,polygon,polyline,line,text,tspan')){
+              const fill=shape.getAttribute('fill')||shape.style.fill||'';
+              const stroke=shape.getAttribute('stroke')||shape.style.stroke||'';
+              if(!/^(none|transparent)$/i.test(fill.trim())&&!['line','polyline'].includes(shape.localName)){
+                shape.style.setProperty('fill',color,'important');
+              }
+              if(stroke&&!/^(none|transparent)$/i.test(stroke.trim())){
+                shape.style.setProperty('stroke',color,'important');
+              }
+            }
+          }
+          return {...part,svg};
+        });
+        const svg=window.EstrattoLogoComposer.compose(prepared,state.layout,12);
         const image=await shared.rasterizeSvg(svg);if(version!==sequence)return;
         state.logoData=image.dataUrl;state.logoRatio=image.ratio;
       }else {state.logoData='';state.logoRatio=4;}
@@ -53,7 +80,10 @@
       const parts=[];for(const file of files){if(file.size>1000000)throw new Error('Размер одного SVG — до 1 МБ.');const text=await file.text();const svg=shared.sanitizeSvg(text);parts.push({id:'mail'+Date.now()+parts.length,name:file.name,svg:new XMLSerializer().serializeToString(svg),scale:100});}
       const next=append?[...state.parts,...parts]:parts;
       if(next.reduce((sum,part)=>sum+part.svg.length,0)>750000)throw new Error('Слишком большой логотип. Уменьшите размер SVG.');
-      state.parts=next;partsUI();await renderLogo();
+      state.parts=next;
+      // An external hosted image would otherwise hide the edited SVG in both preview and export.
+      state.logoUrl='';$('mail-logo-url').value='';
+      partsUI();await renderLogo();
     }catch(error){message('mail-logo-message',error.message==='parse'?'Это не корректный SVG-файл.':error.message,true);}
   }
   for(const [id,field] of [['mail-title','title'],['mail-footer-label','footerLabel'],['mail-footer-company','footerCompany'],['mail-logo-url','logoUrl'],['mail-logo-size','logoHeight']]){
