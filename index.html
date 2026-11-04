@@ -12,6 +12,7 @@
 <script src="vendor/pdf.worker.min.js"></script>
 <script src="logo-composer.js?v=20261029-account-scope"></script>
 <link rel="stylesheet" href="interface.css?v=20261029-account-scope">
+<link rel="stylesheet" href="contracts.css?v=20261104-contracts1">
 </head>
 <body>
 
@@ -33,6 +34,7 @@
      <div class="nav-child nav-disabled"><span>Scheduled</span></div>
     </div>
    </div>
+   <button type="button" data-page="contracts" class="nav-main"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Договоры</span><span class="nav-badge mint">NEW</span></button>
    <button type="button" data-page="mail" class="nav-main"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg><span>Письма</span><span class="nav-badge mint">NEW</span></button>
    <div class="sidebar-kicker section-gap">MANAGEMENT</div>
    <button type="button" class="nav-main" data-page="clients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4 21v-2a8 8 0 0 1 16 0v2z"/></svg><span>Клиенты</span><span class="nav-badge mint">LOCAL</span></button>
@@ -277,6 +279,42 @@
      </aside>
     </div>
    </section>
+   <section id="page-contracts" class="studio-page" aria-label="Редактор договоров">
+      <div class="contracts-intro">
+        <div><span class="eyebrow">DOCUMENTS / LEGAL DRAFTS</span><h1>Договоры и согласия</h1><p>Четыре самостоятельных проекта документов с данными вашей компании и клиента. Можно адаптировать текст каждого пункта и скачать PDF. Это не договоры Interactive Brokers, не подтверждения подписания и не готовые к применению юридические документы.</p></div>
+        <button type="button" class="btn" id="contracts-sync">Заполнить из профиля выписки</button>
+      </div>
+      <div class="contracts-draft-note">Юридически значимые условия, лицензия, регулирующий орган, тарифы и порядок согласия должны быть проверены по фактическому статусу вашей компании. До юридического утверждения не передавайте черновики клиентам как действующие договоры.</div>
+      <div class="contracts-layout">
+        <div class="contracts-sidebar">
+          <section class="contracts-panel">
+            <div class="contracts-label">КОМПЛЕКТ ДОКУМЕНТОВ</div>
+            <div id="contracts-type-list"></div>
+          </section>
+          <section class="contracts-panel">
+            <div class="contracts-label">ПРОФИЛЬ КОМПАНИИ И КЛИЕНТА</div>
+            <p class="hint">Поля сохраняются только в этом браузере. Заполняйте реальные реквизиты; не указывайте вымышленную лицензию.</p>
+            <div id="contracts-fields" style="margin-top:14px"></div>
+            <div class="contracts-rule"></div>
+            <label class="contracts-field">Логотип для договора (SVG, PNG, JPG)<input type="file" id="contracts-logo-file" accept=".svg,image/svg+xml,.png,image/png,.jpg,.jpeg,image/jpeg"></label>
+            <p class="hint">По умолчанию используется логотип из редактора выписки. Новый загруженный логотип применяется только к договорам.</p>
+          </section>
+        </div>
+        <section class="contracts-panel">
+          <div class="contracts-preview-head">
+            <div><span class="contracts-label" id="contracts-selected-version">DRAFT</span><h2 id="contracts-selected-title">Client Agreement</h2></div>
+            <div class="contracts-toolbar">
+              <button type="button" id="contracts-reset-edits" class="btn small">Исходный текст</button>
+              <button type="button" id="contracts-export" class="btn primary">Скачать PDF</button>
+            </div>
+          </div>
+          <div id="contracts-missing" class="contracts-draft-note" hidden></div>
+          <div class="contracts-preview-stage"><article id="contracts-document" class="contracts-document" aria-label="Предпросмотр проекта договора"></article></div>
+          <div style="margin-top:20px"><div id="contracts-clauses"></div></div>
+          <div id="contracts-status" class="contracts-status" role="status"></div>
+        </section>
+      </div>
+    </section>
    <section id="page-mail" class="studio-page" aria-label="Создание письма">
     <div class="editor-heading"><div><div class="eyebrow">ПИСЬМА / EMAIL STUDIO</div><h1>Новое письмо</h1><p>Ваш текст, логотип и готовое оформление для Hostinger.</p></div><button type="button" class="back-overview" data-page="overview">← К обзору</button></div>
     <div class="mail-layout">
@@ -1565,10 +1603,10 @@ renderLogoParts();
   'use strict';
   const pageButtons = [...document.querySelectorAll('[data-page]')];
   function navigate(page){
-    if(!['overview','editor','account','mail','upcoming','drafts','clients','backup','history','templates'].includes(page))return;
+    if(!['overview','editor','account','mail','contracts','upcoming','drafts','clients','backup','history','templates'].includes(page))return;
     for(const p of document.querySelectorAll('.studio-page'))p.classList.toggle('active',p.id === 'page-'+page);
     for(const b of pageButtons){b.classList.toggle('active',b.dataset.page===page); if(b.classList.contains('nav-main') || b.classList.contains('nav-child')) { if(b.dataset.page===page)b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); }}
-    const documentsOpen=['editor','account','upcoming','drafts','history'].includes(page);
+    const documentsOpen=['editor','account','contracts','upcoming','drafts','history'].includes(page);
     const documentsGroup=document.getElementById('documents-group');
     documentsGroup.classList.toggle('expanded',documentsOpen);
     documentsGroup.querySelector('.nav-toggle').setAttribute('aria-expanded',String(documentsOpen));
@@ -1590,7 +1628,7 @@ renderLogoParts();
   for(const id of ['cnt-aperte','cnt-chiuse'])watcher.observe(document.getElementById(id),{childList:true,characterData:true,subtree:true});
   updateMetrics();
   window.EstrattoNavigate=navigate;
-  if(['#editor','#account','#mail','#drafts','#clients','#backup','#history','#templates'].includes(location.hash))navigate(location.hash.slice(1));
+  if(['#editor','#account','#mail','#contracts','#drafts','#clients','#backup','#history','#templates'].includes(location.hash))navigate(location.hash.slice(1));
 })();
 </script>
 <script src="account-assets.js?v=20261029-account-scope"></script>
@@ -1604,5 +1642,7 @@ renderLogoParts();
 <script src="mail.js?v=20261103-logo-click-editor"></script>
 <script src="workspace-core.js?v=20261029-account-scope"></script>
 <script src="workspace.js?v=20261029-account-scope"></script>
+<script src="contracts-core.js?v=20261104-contracts1"></script>
+<script src="contracts.js?v=20261104-contracts1"></script>
 </body>
 </html>
