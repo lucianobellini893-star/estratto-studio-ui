@@ -70,3 +70,14 @@
 #page-contracts .contracts-extra-settings>summary,#page-contracts .contracts-advanced-text>summary{font-size:12px;font-weight:600;cursor:pointer;color:#33332d;list-style-position:inside;padding:5px 0}
 #page-contracts .contracts-extra-settings[open]>summary,#page-contracts .contracts-advanced-text[open]>summary{margin-bottom:13px}
 #page-contracts .contracts-extra-settings .hint{margin-bottom:12px}
+
+/* The contracts page hosts the ORIGINAL shared SVG editor, not a duplicate. */
+#page-contracts #contracts-logo-slot { margin-top: 14px; min-width: 0; }
+#page-contracts #contracts-logo-slot > #shared-logo-editor {
+  background: transparent; border: 0; box-shadow: none; border-radius: 0;
+  padding: 0; margin: 0; width: 100%; min-width: 0;
+}
+#page-contracts #contracts-logo-slot #shared-logo-editor h2 { font-size: 15px; }
+#page-contracts #contracts-logo-slot #logo-stage { min-height: 118px; background: #fff; }
+#page-contracts #contracts-logo-slot #logo-tools,
+#page-contracts #contracts-logo-slot #logo-composition { min-width: 0; }
