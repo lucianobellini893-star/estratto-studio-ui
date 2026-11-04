@@ -12,7 +12,7 @@
 <script src="vendor/pdf.worker.min.js"></script>
 <script src="logo-composer.js?v=20261029-account-scope"></script>
 <link rel="stylesheet" href="interface.css?v=20261029-account-scope">
-<link rel="stylesheet" href="contracts.css?v=20261104-legal-design2">
+<link rel="stylesheet" href="contracts.css?v=20261104-source1">
 </head>
 <body>
 
@@ -328,6 +328,32 @@
               <button type="button" id="contracts-export" class="btn primary">Скачать PDF</button>
             </div>
           </div>
+          <section class="contracts-source-panel" aria-label="Импорт оригинального документа">
+            <div class="contracts-source-head">
+              <div><span class="contracts-label">ИСХОДНЫЙ ДОКУМЕНТ</span><h3>Проверка оригинала и массовая замена реквизитов</h3></div>
+              <span class="contracts-source-tag">ЛОКАЛЬНО</span>
+            </div>
+            <p class="hint">Загрузи PDF, который ты вправе использовать для подготовки и юридической проверки. Исходник хранится отдельно и не изменяется. Здесь редактируется извлечённый текст, а не сам оригинальный PDF.</p>
+            <div class="contracts-source-links" id="contracts-source-links"></div>
+            <label class="contracts-field">Импорт оригинального PDF для выбранного документа
+              <input id="contracts-source-file" type="file" accept=".pdf,application/pdf">
+            </label>
+            <p id="contracts-source-status" class="contracts-status" role="status">Оригинальный PDF ещё не загружен.</p>
+            <div id="contracts-source-controls" hidden>
+              <div class="contracts-rule"></div>
+              <div class="contracts-label">МАССОВАЯ ЗАМЕНА ДАННЫХ КОМПАНИИ</div>
+              <p class="hint">В левом поле — реквизит из исходного PDF; значение справа берётся из профиля компании. Не заменяй автоматически сведения о сторонних брокерах, хранителях и регуляторах, пока юрист не определит их роль.</p>
+              <div id="contracts-source-rules"></div>
+              <div class="contracts-toolbar">
+                <button type="button" class="btn small" id="contracts-source-apply">Применить ко всем страницам</button>
+                <button type="button" class="btn small" id="contracts-source-export">Скачать рабочую PDF-версию</button>
+                <button type="button" class="btn small" id="contracts-source-original">Скачать неизменённый исходник</button>
+                <button type="button" class="btn small" id="contracts-source-remove">Убрать импорт</button>
+              </div>
+              <p class="hint">Экспортируемая рабочая версия создаётся из текста и может отличаться по расположению строк и страниц от исходного PDF. Для точного визуального сравнения используй исходник.</p>
+              <div class="contracts-source-pages" id="contracts-source-pages"></div>
+            </div>
+          </section>
           <div id="contracts-missing" class="contracts-draft-note" hidden></div>
           <div class="contracts-preview-stage"><article id="contracts-document" class="contracts-document" aria-label="Предпросмотр проекта договора"></article></div>
           <div style="margin-top:20px"><div id="contracts-clauses"></div></div>
@@ -1666,5 +1692,6 @@ renderLogoParts();
 <script src="contracts-clauses.js?v=20261104-longform1"></script>
 <script src="contracts-core.js?v=20261104-longform1"></script>
 <script src="contracts.js?v=20261104-autofill2"></script>
+<script src="contracts-source.js?v=20261104-source1"></script>
 </body>
 </html>
