@@ -627,3 +627,16 @@ select:focus-visible { outline:2px solid #72756b; outline-offset:3px; }
 #mail-logo-tools { margin:8px 0 18px; }
 #mail-logo-tools .sel-info { color:var(--muted); font-size:12px; }
 #mail-logo-colors .sw { min-width:26px; min-height:26px; border:1px solid #d5d5cf; border-radius:7px; }
+
+/* Mail signature editor: photo + rounded black business-card footer. */
+#page-mail .mail-footer-card-fields {margin-top:14px;}
+#page-mail .mail-footer-card-fields[hidden],#page-mail #mail-footer-simple-fields[hidden] {display:none!important;}
+#page-mail .mail-footer-card-fields .f,#page-mail #mail-footer-simple-fields .f {margin-top:12px;}
+#page-mail .mail-signature-photo {display:flex;align-items:center;gap:18px;padding:15px;background:#f8f7f3;border:1px solid var(--line);border-radius:15px;margin:12px 0 16px;}
+#page-mail .mail-signature-photo-preview {width:96px;height:96px;min-width:96px;display:flex;align-items:center;justify-content:center;background:#0b0c0f;border:2px solid #c9a16a;border-radius:50%;color:#c9a16a;font-size:12px;overflow:hidden;}
+#page-mail .mail-signature-photo-actions{min-width:0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+#page-mail .mail-signature-photo-actions .hint{width:100%;margin:2px 0 0;font-size:11px;}
+#page-mail .mail-signature-fields-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;}
+#page-mail .mail-signature-fields-grid .f{min-width:0;}
+#page-mail .mail-footer-card-fields details{border-top:1px solid var(--line);padding-top:10px;}
+@media(max-width:670px){#page-mail .mail-signature-fields-grid{grid-template-columns:1fr;}#page-mail .mail-signature-photo{align-items:flex-start;}}
