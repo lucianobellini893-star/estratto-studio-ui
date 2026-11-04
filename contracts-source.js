@@ -76,7 +76,7 @@
  }
  function pagesPreview(doc){
   const stage=$('contracts-source-pages');stage.replaceChildren();
-  const limit=Math.min(doc.edited.length,12);
+  const limit=doc.edited.length;
   for(let i=0;i<limit;i++){
    const details=n('details','contracts-source-page');
    if(i===0)details.open=true;
@@ -87,9 +87,7 @@
    area.addEventListener('input',()=>{doc.edited[i]=area.value;status('Изменения страницы '+(i+1)+' сохранены в текущем открытом окне.');});
    details.append(area);stage.append(details);
   }
-  if(doc.edited.length>limit){
-   stage.append(n('p','hint','Показаны первые '+limit+' из '+doc.edited.length+' страниц. Замена реквизитов применяется ко всем страницам, даже скрытым. В рабочий PDF входят все страницы.'));
-  }
+  stage.append(n('p','hint','Все '+doc.edited.length+' страниц доступны для редактирования. Открой нужную страницу, чтобы изменить её текст.'));
  }
  function refresh(){
   active=currentType();
