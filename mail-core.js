@@ -36,6 +36,52 @@
     const width=Math.max(1,Math.min(240,Math.round(wanted*ratio)));
     return {width,height:Math.max(1,Math.round(width/ratio))};
   }
+
+  function signature(state,options={}){
+    if(!state.footerEnabled)return '';
+    if(state.footerStyle!=='card'){
+      return '<tr><td align="center" style="padding:32px 12px 0;text-align:center;font-family:'+font+';font-size:11px;line-height:20px;color:#8b8b91;">'
+        +escape(state.footerLabel||'')+' <strong style="font-size:15px;font-weight:600;color:#7b7b82;">'+escape(state.footerCompany||'')+'</strong></td></tr>';
+    }
+    const safe=(v,n)=>escape(String(v||'').trim().slice(0,n));
+    // Only explicitly validated image URLs or the photo chosen by the operator.
+    const photo=options.photoSource||https(state.signaturePhotoUrl)||
+      (/^data:image\/(?:jpeg|png);base64,[a-z0-9+/=]+$/i.test(state.signaturePhoto||'')?state.signaturePhoto:'');
+    const name=safe(state.signatureName||'',100);
+    const job=safe(state.signatureRole||'',130);
+    const company=safe(state.footerCompany||'',100);
+    const phone=safe(state.signaturePhone||'',60);
+    const mail=safe(state.signatureEmail||'',130);
+    const address=safe(state.signatureAddress||'',200);
+    const gold='#c9a16a';
+    const icon=(glyph)=>'<span style="color:'+gold+';font-size:13px;line-height:17px;">'+glyph+'</span>';
+    const row=(sym,value,href)=>!value?'':'<tr><td valign="top" width="19" style="width:19px;padding:2px 0;font-family:Arial,sans-serif;">'+icon(sym)+'</td><td style="padding:2px 0;color:#eceef0;font-family:Arial,sans-serif;font-size:11px;line-height:16px;word-break:break-word;">'+(href?'<a href="'+escape(href)+'" style="color:#eceef0;text-decoration:none;">'+value+'</a>':value)+'</td></tr>';
+    const phoneHref=phone?'tel:'+String(state.signaturePhone).replace(/[^+\d]/g,''):'';
+    const emailHref=mail?'mailto:'+encodeURIComponent(String(state.signatureEmail).trim()):'';
+    const socials=[
+      ['in','signatureLinkedin'],['wa','signatureWhatsapp'],['tg','signatureTelegram'],['ig','signatureInstagram']
+    ].filter(([,key])=>https(state[key])).map(([label,key])=>
+      '<a href="'+escape(https(state[key]))+'" style="display:inline-block;box-sizing:border-box;border:1px solid #63676c;border-radius:50%;width:27px;height:27px;text-align:center;line-height:25px;font-size:9px;font-weight:600;text-decoration:none;color:#f5f5f5;margin:3px 3px 0 0;font-family:Arial,sans-serif;">'+label+'</a>').join('');
+    const head=photo?'<img src="'+escape(photo)+'" width="90" height="90" alt="Profile photo" style="display:block;width:90px;height:90px;object-fit:cover;border-radius:50%;border:2px solid '+gold+';">':
+      '<div style="box-sizing:border-box;width:94px;height:94px;border-radius:50%;border:2px solid '+gold+';text-align:center;line-height:90px;color:'+gold+';font-size:38px;">'+escape((state.signatureName||' ').trim().charAt(0)||'•')+'</div>';
+    const identity='<table role="presentation" border="0" cellspacing="0" cellpadding="0" width="100%" style="border-collapse:collapse;"><tr>'
+      +'<td width="105" valign="middle" style="width:105px;padding:0 12px 0 0;">'+head+'</td>'
+      +'<td valign="middle" style="padding:0;"><div style="font-family:Arial,sans-serif;font-weight:700;font-size:19px;line-height:24px;color:#fff;">'+name+'</div>'
+      +'<div style="font-family:Arial,sans-serif;color:#ddd;font-size:11px;line-height:16px;margin-top:2px;">'+job+'</div>'
+      +'<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;border-collapse:collapse;">'
+      +row('☎',phone,phoneHref)+row('✉',mail,emailHref)+row('⌖',address,'')+'</table></td></tr></table>';
+    const brand='<div style="font-family:Arial,sans-serif;color:#fff;font-size:16px;line-height:20px;font-weight:750;letter-spacing:-.3px;margin:0 0 15px;">'
+      +'<span style="color:'+gold+';font-size:22px;vertical-align:middle;">●</span> '+company+'</div>'
+      +'<div style="font-family:Arial,sans-serif;">'+socials+'</div>';
+    return '<tr><td style="padding:24px 0 0;">'
+      +'<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" bgcolor="#0a0b0d" style="width:100%;background-color:#0a0b0d;border:1px solid #222429;border-radius:18px;border-collapse:separate;overflow:hidden;">'
+      +'<tr><td valign="middle" style="padding:20px 16px;">'
+      +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;"><tr>'
+      +'<td valign="middle" style="width:69%;padding:0 15px 0 0;">'+identity+'</td>'
+      +'<td width="1" bgcolor="#343537" style="width:1px;font-size:1px;line-height:1px;">&nbsp;</td>'
+      +'<td valign="middle" style="padding:4px 0 4px 14px;">'+brand+'</td>'
+      +'</tr></table></td></tr></table></td></tr>';
+  }
   function build(state,options={}){
     const source=options.logoSource||https(state.logoUrl)||png(state.logoData);
     const image=source&&(/^(https:\/\/|data:image\/png;base64,|cid:estratto-logo@local$)/.test(source))?source:'';
@@ -44,7 +90,7 @@
     const body=paragraphs(state.text,state.runs)||(options.placeholder?`<p style="margin:0;font-family:${font};font-size:16px;line-height:26px;color:#999990;">Введите или вставьте текст — здесь появится оформленное письмо.</p>`:'');
     const logo=image?`<tr><td align="left" style="padding:0 0 24px;text-align:left;"><img src="${escape(image)}" alt="${escape(state.logoAlt||'Logo')}" width="${size.width}" height="${size.height}" style="display:block;width:${size.width}px;height:${size.height}px;max-width:100%;border:0;outline:none;text-decoration:none;"></td></tr>`:'';
     const heading=title?`<h1 style="margin:0 0 20px;font-family:${font};font-size:21px;line-height:30px;font-weight:600;color:#202020;">${escape(title)}</h1>`:'';
-    const footer=state.footerEnabled?`<tr><td align="center" style="padding:32px 12px 0;text-align:center;font-family:${font};font-size:11px;line-height:20px;color:#8b8b91;">${escape(state.footerLabel||'')} <strong style="font-family:${font};font-size:15px;font-weight:600;color:#7b7b82;">${escape(state.footerCompany||'')}</strong></td></tr>`:'';
+    const footer=signature(state,options);
     const fragment=`<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#f4f4f5" style="width:100%;background-color:#f4f4f5;border-collapse:collapse;margin:0;"><tr><td align="center" class="mail-outer-padding" style="padding:40px 24px 56px;">
 <!--[if mso]><table role="presentation" width="560" border="0" cellspacing="0" cellpadding="0"><tr><td><![endif]-->
 <table role="presentation" width="560" border="0" cellspacing="0" cellpadding="0" style="width:100%;max-width:560px;border-collapse:separate;">${logo}<tr><td class="mail-content-padding" align="left" bgcolor="#ffffff" style="padding:32px;background-color:#ffffff;border:1px solid #e7e7ed;border-radius:12px;text-align:left;word-wrap:break-word;">${heading}${body}</td></tr>${footer}</table>
@@ -77,9 +123,12 @@
     const token=String(options.token||Date.now().toString(36)).replace(/[^a-z0-9]/gi,'').slice(0,40)||'message';
     const outer='estratto-related-'+token,inner='estratto-alternative-'+token;
     const data=png(state.logoData),embedded=Boolean(data);
-    const built=build(state,{...options,logoSource:embedded?'cid:estratto-logo@local':undefined});
+    const photo=String(state.signaturePhoto||'');
+    const embeddedPhoto=state.footerEnabled&&state.footerStyle==='card'&&/^data:image\/(?:jpeg|png);base64,[a-z0-9+/=]+$/i.test(photo);
+    const built=build(state,{...options,logoSource:embedded?'cid:estratto-logo@local':undefined,photoSource:embeddedPhoto?'cid:estratto-photo@local':undefined});
     const lines=['MIME-Version: 1.0','X-Unsent: 1','Subject: '+subject(state.title),`Content-Type: multipart/related; boundary="${outer}"`,'',`--${outer}`,`Content-Type: multipart/alternative; boundary="${inner}"`,'',`--${inner}`,'Content-Type: text/plain; charset=UTF-8','Content-Transfer-Encoding: base64','',wrap(base64(built.plainText)),`--${inner}`,'Content-Type: text/html; charset=UTF-8','Content-Transfer-Encoding: base64','',wrap(base64(built.html)),`--${inner}--`];
     if(embedded)lines.push(`--${outer}`,'Content-Type: image/png; name="logo.png"','Content-Transfer-Encoding: base64','Content-ID: <estratto-logo@local>','Content-Disposition: inline; filename="logo.png"','',wrap(data.split(',')[1]));
+    if(embeddedPhoto){const mime=photo.startsWith('data:image/png;')?'image/png':'image/jpeg';lines.push(`--${outer}`,'Content-Type: '+mime+'; name="portrait"','Content-Transfer-Encoding: base64','Content-ID: <estratto-photo@local>','Content-Disposition: inline; filename="portrait"','',wrap(photo.split(',')[1]));}
     lines.push(`--${outer}--`,'');return lines.join('\r\n');
   }
   return {escape,https,png,validate,paragraphs,dimensions,build,eml};
