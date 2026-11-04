@@ -13,9 +13,16 @@
  };
  let stored={};try{stored=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(_){}
  let profile={...defaults,...stored.profile},overrides=stored.overrides&&typeof stored.overrides==='object'?stored.overrides:{};
+ // The expanded A-H agreement has different paragraph indices from the earlier
+ // 12-section draft. Preserve prior edits in a recovery key, never misapply them.
+ if(!stored.expandedAgreementV1&&overrides.agreement&&Object.keys(overrides.agreement).length){
+   try{localStorage.setItem('estratto-contracts-legacy-agreement-edits.v1',JSON.stringify({savedAt:new Date().toISOString(),edits:overrides.agreement}));}catch(_){}
+   overrides={...overrides};delete overrides.agreement;
+ }
+ stored.expandedAgreementV1=true;
  let selected=core.types.some(type=>type.id===stored.selected)?stored.selected:'agreement';
  let logoData=typeof stored.logoData==='string'&&stored.logoData.startsWith('data:image/png;base64,')?stored.logoData:'',logoVersion=0,updating=false;
- function save(){try{localStorage.setItem(KEY,JSON.stringify({profile,overrides,selected,logoData:logoData||''}));}catch(_){status('Не удалось сохранить настройки локально.',true)}}
+ function save(){try{localStorage.setItem(KEY,JSON.stringify({profile,overrides,selected,logoData:logoData||'',expandedAgreementV1:true}));}catch(_){status('Не удалось сохранить настройки локально.',true)}}
  function status(text,error=false){const el=$('contracts-status');el.textContent=text||'';el.classList.toggle('err',error);}
  function el(tag,cls,value){
    const element=document.createElement(tag);
@@ -45,12 +52,12 @@
      ['companyName','Название компании'],['companyAddress','Юридический адрес','textarea'],
      ['companyCountry','Страна регистрации'],['companyRegistration','Регистрационный номер'],
      ['companyEmail','Email компании'],['companyWebsite','Сайт'],
-     ['clientName','Имя клиента'],['clientId','ID клиента']
+     ['regulator','Регулятор (только реальный)'],['authorization','Номер лицензии (если имеется)'],
+     ['governingLaw','Применимое право'],['clientName','Имя клиента'],['clientId','ID клиента']
    ];
    const optional=[
      ['accountId','Номер счёта'],['clientCountry','Страна проживания'],
-     ['governingLaw','Применимое право'],['jurisdiction','Компетентный суд / орган'],
-     ['regulator','Регулятор — только подтверждённый'],['authorization','Номер лицензии — только если есть'],
+     ['jurisdiction','Компетентный суд / орган'],
      ['complaintsEmail','Email для жалоб'],['protectionScheme','Схема защиты инвесторов — если действует'],
      ['services','Предоставляемые услуги','textarea'],['products','Доступные продукты','textarea'],
      ['feeSchedule','Тарифы и комиссии'],['signatureMethod','Метод подтверждения согласия'],
