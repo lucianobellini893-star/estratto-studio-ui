@@ -24,7 +24,7 @@
   ['companyWebsite','Сайт']
  ];
  const identitiesScript=document.createElement('script');
- identitiesScript.src='contracts-source-identities.js?v=20261104-inventory1';
+ identitiesScript.src='contracts-source-identities.js?v=20261104-inventory2';
  identitiesScript.addEventListener('load',()=>{const doc=current();if(doc)renderInventory(doc);});
  identitiesScript.addEventListener('error',()=>status('Сканер реквизитов не загрузился. Попробуй обновить страницу.',true));
  document.head.append(identitiesScript);
