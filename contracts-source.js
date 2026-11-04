@@ -23,6 +23,11 @@
   ['companyEmail','Email'],
   ['companyWebsite','Сайт']
  ];
+ const identitiesScript=document.createElement('script');
+ identitiesScript.src='contracts-source-identities.js?v=20261104-inventory1';
+ identitiesScript.addEventListener('load',()=>{const doc=current();if(doc)renderInventory(doc);});
+ identitiesScript.addEventListener('error',()=>status('Сканер реквизитов не загрузился. Попробуй обновить страницу.',true));
+ document.head.append(identitiesScript);
  const docs={};
  let active='agreement';
  let cycle=0;
@@ -97,6 +102,73 @@
    if(document.activeElement?.dataset?.sourceOld==='companyName')fillCompanySelector(doc);
   });
  }
+ function createInventoryUI(){
+  const container=document.createElement('section');
+  container.className='contracts-source-inventory';
+  container.style.cssText='padding:12px;margin:14px 0;border:1px solid #c9d8e5;border-radius:12px;background:#f7fafc;';
+  container.append(n('div','contracts-label','ВСЕ НАЙДЕННЫЕ НАЗВАНИЯ, АДРЕСА, САЙТЫ И РЕКВИЗИТЫ'));
+  container.append(n('p','hint','Поставь галочку и введи новое значение. IBUK и IBLLC — разные юридические лица; не заменяй обе компании одним именем без проверки юристом.'));
+  const box=n('div');box.id='contracts-source-inventory-list';container.append(box);
+  $('contracts-source-rules').before(container);
+ }
+ function inventoryFallback(pages){
+  const source=pages.join(' ').replace(/\s+/g,' ');
+  const candidates=[
+   ['Interactive Brokers (U.K.) Limited','Название IBUK','companyName'],
+   ['Interactive Brokers LLC','Отдельная компания IBLLC',''],
+   ['IBUK','Аббревиатура IBUK',''],
+   ['IBLLC','Аббревиатура IBLLC',''],
+   ['IBKR','Бренд группы',''],
+   ['Interactive Brokers','Краткое название',''],
+   ['208159','Номер лицензии FCA','authorization'],
+   ['www.ibkr.co.uk/support','Адрес поддержки',''],
+   ['www.ibkr.co.uk','Веб-сайт','companyWebsite'],
+   ['ibukcomplaints@interactivebrokers.co.uk','Почта для жалоб',''],
+   ['dpo@ibkr.com','Почта DPO','']
+  ];
+  return candidates.map(([original,description,field])=>{
+   const count=source.toLowerCase().split(original.toLowerCase()).length-1;
+   return {original,description,field,count,kind:'company'};
+  }).filter(x=>x.count);
+ }
+ function renderInventory(doc){
+  const box=$('contracts-source-inventory-list');
+  if(!box||!doc)return;
+  const scanner=window.EstrattoSourceIdentities;
+  const list=scanner?.scan(doc.pages)||inventoryFallback(doc.pages);
+  doc.inventory=list;
+  box.replaceChildren();
+  const choices=doc.choice||{};
+  for(const [index,item] of list.entries()){
+   const row=n('div','contracts-source-inventory-row');
+   row.style.cssText='display:grid;grid-template-columns:24px minmax(0,1.3fr) minmax(0,1fr);gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #dfe5eb;';
+   const tick=n('input');tick.type='checkbox';tick.dataset.inventoryChecked=String(index);
+   tick.checked=!!choices[item.original]?.enabled;tick.title='Включить замену';
+   const left=n('div');
+   left.append(n('strong','',item.original+' ('+item.count+')'));
+   left.append(n('div','hint',item.description));
+   const right=n('input');right.type='text';right.placeholder='Новое значение';right.dataset.inventoryNew=String(index);
+   right.value=choices[item.original]?.newText||(item.field?profile()[item.field]||'':'');
+   const update=()=>{
+    doc.choice=doc.choice||{};
+    doc.choice[item.original]={enabled:tick.checked,newText:right.value.trim()};
+    if(tick.checked&&right.value.trim())status('Готова замена «'+item.original+'» → «'+right.value.trim()+'». Нажми «Применить ко всем страницам».');
+   };
+   tick.addEventListener('change',update);right.addEventListener('input',update);
+   row.append(tick,left,right);box.append(row);
+  }
+  box.append(n('p','hint','Найдено '+list.length+' разных обозначений. Количество в скобках — найденные текстовые упоминания в загруженном файле.'));
+ }
+ function collectInventoryRules(doc){
+  if(!doc)return [];
+  const results=[];
+  for(const item of doc.inventory||[]){
+   const selected=doc.choice?.[item.original];
+   if(!selected?.enabled||!selected.newText||selected.newText===item.original)continue;
+   results.push({key:'identity:'+item.original,old:item.original,newText:selected.newText});
+  }
+  return results;
+ }
  function pagesPreview(doc){
   const stage=$('contracts-source-pages');stage.replaceChildren();
   const limit=doc.edited.length;
@@ -128,6 +200,7 @@
   document.querySelectorAll('[data-source-type]').forEach(a=>a.classList.toggle('active',a.dataset.sourceType===active));
   if(!doc){status('Для '+TYPES[active].name+' ещё не загружен оригинальный PDF.');$('contracts-source-pages').replaceChildren();return;}
   pagesPreview(doc);
+  renderInventory(doc);
   status('Исходник: '+doc.filename+' · '+doc.pages.length+' стр. · Рабочая версия сохраняется только до обновления вкладки.');
  }
  function safeFilename(str){return String(str||'document').replace(/[^a-z0-9_-]+/gi,'_').slice(0,75);}
@@ -135,8 +208,8 @@
   syncCompanyName();
   const values=profile();
   const engine=window.EstrattoPdfLayout;
-  if(engine&&current())return engine.getRules(current(),values,FIELDS);
-  return [];
+  if(engine&&current())return [...collectInventoryRules(current()),...engine.getRules(current(),values,FIELDS)].sort((a,b)=>b.old.length-a.old.length);
+  return collectInventoryRules(current());
  }
  function replacementPattern(text){
   const escaped=String(text).trim().split(/\s+/).map(piece=>piece.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
@@ -153,7 +226,7 @@
  function applyReplacement(){
   const doc=current();if(!doc){status('Сначала загрузи PDF.',true);return;}
   const rules=replacementRules();
-  if(!rules.length){status('Введи старые реквизиты слева и новые реквизиты в профиле компании.',true);return;}
+  if(!rules.length){status('Выбери реквизиты в таблице, введи новые значения и поставь галочки.',true);return;}
   // Apply edits to the current working text, not the original. This preserves
   // paragraphs that the user previously revised by hand.
   let total=0;
@@ -206,7 +279,7 @@
   const doc=current();if(!doc){status('Сначала загрузи PDF.',true);return;}
   const engine=window.EstrattoPdfLayout;
   if(!engine){status('Модуль сохранения дизайна PDF не загрузился.',true);return;}
-  const rules=engine.getRules(doc,profile(),FIELDS);
+  const rules=replacementRules();
   if(!rules.length){
    status('Для замены в исходной вёрстке сначала заполни старые реквизиты слева и свои данные в профиле.',true);
    return;
@@ -305,5 +378,5 @@
   if(event.target.closest('[data-contract-type]'))requestAnimationFrame(refresh);
  });
  $('contracts-fields')?.addEventListener('input',()=>{for(const [key] of FIELDS){const dest=document.querySelector('[data-source-to="'+key+'"]');if(dest)dest.textContent=profile()[key]||'Не заполнено в профиле';}});
- addSourceLinks();mountRules();refresh();
+ createInventoryUI();addSourceLinks();mountRules();refresh();
 })();
