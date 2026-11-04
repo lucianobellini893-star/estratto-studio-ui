@@ -21,8 +21,8 @@
  }
  stored.expandedAgreementV1=true;
  let selected=core.types.some(type=>type.id===stored.selected)?stored.selected:'agreement';
- let logoData=typeof stored.logoData==='string'&&stored.logoData.startsWith('data:image/png;base64,')?stored.logoData:'',logoVersion=0,updating=false;
- function save(){try{localStorage.setItem(KEY,JSON.stringify({profile,overrides,selected,logoData:logoData||'',expandedAgreementV1:true}));}catch(_){status('Не удалось сохранить настройки локально.',true)}}
+ let logoData='',logoVersion=0,updating=false; // PNG is regenerated from the shared SVG editor instead of stored twice.
+ function save(){try{localStorage.setItem(KEY,JSON.stringify({profile,overrides,selected,expandedAgreementV1:true}));}catch(error){status('Не удалось сохранить данные договора: возможно, хранилище браузера переполнено. Логотип теперь сохраняется в общем редакторе SVG, а не дублируется в настройках договора.',true)}}
  function status(text,error=false){const el=$('contracts-status');el.textContent=text||'';el.classList.toggle('err',error);}
  function el(tag,cls,value){
    const element=document.createElement(tag);
