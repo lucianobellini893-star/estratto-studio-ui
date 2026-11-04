@@ -346,11 +346,12 @@
               <div id="contracts-source-rules"></div>
               <div class="contracts-toolbar">
                 <button type="button" class="btn small" id="contracts-source-apply">Применить ко всем страницам</button>
-                <button type="button" class="btn small" id="contracts-source-export">Скачать рабочую PDF-версию</button>
+                <button type="button" class="btn small" id="contracts-source-export">Скачать PDF в дизайне оригинала</button>
+                <button type="button" class="btn small" id="contracts-source-text-export">Скачать PDF с ручными правками текста</button>
                 <button type="button" class="btn small" id="contracts-source-original">Скачать неизменённый исходник</button>
                 <button type="button" class="btn small" id="contracts-source-remove">Убрать импорт</button>
               </div>
-              <p class="hint">Экспортируемая рабочая версия создаётся из текста и может отличаться по расположению строк и страниц от исходного PDF. Для точного визуального сравнения используй исходник.</p>
+              <p class="hint"><strong>В дизайне оригинала:</strong> все изображения, заголовки, таблицы, отступы и оформление остаются на прежних местах; автоматически заменяются только реквизиты по правилам выше. Такой PDF формируется из изображений исходных страниц, текст не выделяется, электронные подписи и интерактивные поля не сохраняются. Если новое название длиннее исходного, оно может уменьшаться. <strong>Для правок любого текста</strong> используй отдельную кнопку — она пересобирает страницы и не сохраняет исходную вёрстку. Оба варианта предназначены для проверки юристом.</p>
               <div class="contracts-source-pages" id="contracts-source-pages"></div>
             </div>
           </section>
@@ -1692,6 +1693,7 @@ renderLogoParts();
 <script src="contracts-clauses.js?v=20261104-longform1"></script>
 <script src="contracts-core.js?v=20261104-longform1"></script>
 <script src="contracts.js?v=20261104-autofill2"></script>
-<script src="contracts-source.js?v=20261104-source1"></script>
+<script src="contracts-source-layout.js?v=20261104-visual1"></script>
+<script src="contracts-source.js?v=20261104-visual1"></script>
 </body>
 </html>
