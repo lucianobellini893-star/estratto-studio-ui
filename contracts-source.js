@@ -169,6 +169,40 @@
    status('Не удалось прочитать PDF: '+(e?.message||'ошибка документа'),true);
   }
  }
+ async function exportPreservingLayout(){
+  const doc=current();if(!doc){status('Сначала загрузи PDF.',true);return;}
+  const engine=window.EstrattoPdfLayout;
+  if(!engine){status('Модуль сохранения дизайна PDF не загрузился.',true);return;}
+  const rules=engine.getRules(doc,profile(),FIELDS);
+  if(!rules.length){
+   status('Для замены в исходной вёрстке сначала заполни старые реквизиты слева и свои данные в профиле.',true);
+   return;
+  }
+  const button=$('contracts-source-export');
+  button.disabled=true;
+  try{
+   const changed=doc.edited.some((page,i)=>page!==doc.pages[i]);
+   if(changed)status('Сохраняю оригинальный дизайн. В этот вариант войдут массовые замены реквизитов; свободные правки страниц из текстовых полей требуют отдельного экспорта.');
+   const result=await engine.exportPdf(doc,rules,(index,total)=>{
+    status('Сохраняю исходный дизайн: страница '+index+' из '+total+'…');
+   });
+   const matches=Object.values(result.coverage).reduce((n,c)=>n+c,0);
+   if(!matches){
+    status('Совпадений не найдено: PDF не был экспортирован. Проверь написание старых реквизитов (в PDF они могут быть разбиты на строки или отдельные фрагменты).',true);
+    return;
+   }
+   result.pdf.save('layout_review_'+safeFilename(TYPES[active].name)+'.pdf');
+   const missing=rules.filter(rule=>!result.coverage[rule.key]).map(rule=>rule.old);
+   let note='PDF с исходным дизайном создан: '+result.pages+' стр.; замен найдено: '+matches+'.';
+   if(missing.length)note+=' Не найдены: '+missing.join('; ')+'.';
+   if(result.compressed)note+=' На '+result.compressed+' участках новое значение уменьшено для размещения в старой строке.';
+   if(changed)note+=' Ручные изменения полного текста не включены — для них есть отдельная кнопка экспорта.';
+   note+=' Проверь все страницы перед передачей юристу.';
+   status(note,missing.length>0);
+  }catch(error){
+   status('Не удалось сохранить исходную вёрстку: '+(error?.message||'ошибка PDF'),true);
+  }finally{button.disabled=false;}
+ }
  async function exportWorkingCopy(){
   const doc=current();if(!doc){status('Сначала загрузи PDF.',true);return;}
   const JsPDF=window.jspdf?.jsPDF;if(!JsPDF){status('Библиотека экспорта PDF недоступна.',true);return;}
@@ -205,7 +239,8 @@
  }
  input.addEventListener('change',event=>{const f=event.target.files?.[0];event.target.value='';parseFile(f);});
  $('contracts-source-apply').addEventListener('click',applyReplacement);
- $('contracts-source-export').addEventListener('click',exportWorkingCopy);
+ $('contracts-source-export').addEventListener('click',exportPreservingLayout);
+ $('contracts-source-text-export').addEventListener('click',exportWorkingCopy);
  $('contracts-source-original').addEventListener('click',()=>{
   const doc=current();if(doc)download(doc.blob,doc.filename);
  });
