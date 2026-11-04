@@ -84,7 +84,7 @@
    const area=n('textarea','contracts-source-textarea');
    area.value=doc.edited[i];
    area.spellcheck=false;area.rows=9;area.setAttribute('aria-label','Редактировать текст страницы '+(i+1));
-   area.addEventListener('input',()=>{doc.edited[i]=area.value;status('Изменения страницы '+(i+1)+' сохранены в текущем открытом окне.');});
+   area.addEventListener('input',()=>{doc.edited[i]=area.value;doc.manuallyEdited=true;status('Изменения страницы '+(i+1)+' сохранены в текущем открытом окне. Для включения этих правок используй экспорт PDF с ручными правками текста.');});
    details.append(area);stage.append(details);
   }
   stage.append(n('p','hint','Все '+doc.edited.length+' страниц доступны для редактирования. Открой нужную страницу, чтобы изменить её текст.'));
@@ -106,32 +106,39 @@
   status('Исходник: '+doc.filename+' · '+doc.pages.length+' стр. · Рабочая версия сохраняется только до обновления вкладки.');
  }
  function safeFilename(str){return String(str||'document').replace(/[^a-z0-9_-]+/gi,'_').slice(0,75);}
+ function replacementRules(){
+  const values=profile();
+  const engine=window.EstrattoPdfLayout;
+  if(engine&&current())return engine.getRules(current(),values,FIELDS);
+  return [];
+ }
+ function replacementPattern(text){
+  const escaped=String(text).trim().split(/\s+/).map(piece=>piece.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+  return new RegExp(escaped.join('\\s+'),'gi');
+ }
+ function textWithReplacements(value,rules){
+  let text=String(value),count=0;
+  for(const rule of rules){
+   const pattern=replacementPattern(rule.old);
+   text=text.replace(pattern,()=>{count++;return rule.newText;});
+  }
+  return {text,count};
+ }
  function applyReplacement(){
   const doc=current();if(!doc){status('Сначала загрузи PDF.',true);return;}
-  const values=profile(),rules=[];
-  for(const input of $('contracts-source-rules').querySelectorAll('[data-source-old]')){
-   const key=input.dataset.sourceOld,old=input.value.trim(),replacement=values[key];
-   if(!old||!replacement)continue;
-   if(old===replacement)continue;
-   rules.push({key,old,newText:replacement});
-  }
-  if(!rules.length){status('Впиши старое значение слева и новое в основном профиле компании.',true);return;}
-  // Longest first avoids replacing a parent brand substring before a complete entity.
-  rules.sort((a,b)=>b.old.length-a.old.length);
+  const rules=replacementRules();
+  if(!rules.length){status('Введи старые реквизиты слева и новые реквизиты в профиле компании.',true);return;}
+  // Apply edits to the current working text, not the original. This preserves
+  // paragraphs that the user previously revised by hand.
   let total=0;
-  doc.edited=doc.pages.map(original=>{
-   let content=original;
-   for(const rule of rules){
-    if(rule.old.length<3)continue;
-    const parts=content.split(rule.old);
-    total+=parts.length-1;
-    content=parts.join(rule.newText);
-   }
-   return content;
+  doc.edited=doc.edited.map(page=>{
+   const r=textWithReplacements(page,rules);total+=r.count;return r.text;
   });
-  doc.old={};for(const inp of $('contracts-source-rules').querySelectorAll('[data-source-old]'))doc.old[inp.dataset.sourceOld]=inp.value;
+  doc.old={};
+  for(const inp of $('contracts-source-rules').querySelectorAll('[data-source-old]'))doc.old[inp.dataset.sourceOld]=inp.value;
   pagesPreview(doc);
-  status('Замена завершена: '+total+' совпадений на '+doc.pages.length+' страницах. Проверь каждое упоминание и юридические роли сторон до отправки юристу.');
+  if(!total){status('Совпадений в редактируемом тексте не найдено. Проверь старые названия: они могут отличаться по написанию.',true);return;}
+  status('Заменено '+total+' упоминаний на '+doc.edited.length+' страницах. Изменения включены в PDF с ручными правками текста. PDF с исходным дизайном выполняет отдельную замену на самих страницах.');
  }
  async function parseFile(file){
   if(!file)return;
@@ -163,7 +170,7 @@
    const count=pages.reduce((sum,page)=>sum+page.trim().length,0);
    if(count<100)throw new Error('PDF не содержит извлекаемого текста. Возможно, он является сканом и требует OCR.');
    const target=currentType();
-   docs[target]={filename:file.name,bytes,blob:new Blob([bytes],{type:'application/pdf'}),pages,edited:[...pages],old:{}};
+   docs[target]={filename:file.name,bytes,blob:new Blob([bytes],{type:'application/pdf'}),pages,edited:[...pages],old:{},manuallyEdited:false};
    active=target;refresh();
   }catch(e){
    status('Не удалось прочитать PDF: '+(e?.message||'ошибка документа'),true);
@@ -181,8 +188,11 @@
   const button=$('contracts-source-export');
   button.disabled=true;
   try{
-   const changed=doc.edited.some((page,i)=>page!==doc.pages[i]);
-   if(changed)status('Сохраняю оригинальный дизайн. В этот вариант войдут массовые замены реквизитов; свободные правки страниц из текстовых полей требуют отдельного экспорта.');
+   // Never silently discard free-form text edits in the visually faithful export.
+   if(doc.manuallyEdited){
+    status('В документе есть ручные правки текста. PDF с исходной вёрсткой может заменить только указанные реквизиты. Для сохранения ВСЕХ текстовых правок нажми «Скачать PDF с ручными правками текста».',true);
+    return;
+   }
    const result=await engine.exportPdf(doc,rules,(index,total)=>{
     status('Сохраняю исходный дизайн: страница '+index+' из '+total+'…');
    });
@@ -196,7 +206,7 @@
    let note='PDF с исходным дизайном создан: '+result.pages+' стр.; замен найдено: '+matches+'.';
    if(missing.length)note+=' Не найдены: '+missing.join('; ')+'.';
    if(result.compressed)note+=' На '+result.compressed+' участках новое значение уменьшено для размещения в старой строке.';
-   if(changed)note+=' Ручные изменения полного текста не включены — для них есть отдельная кнопка экспорта.';
+
    note+=' Проверь все страницы перед передачей юристу.';
    status(note,missing.length>0);
   }catch(error){
@@ -206,6 +216,12 @@
  async function exportWorkingCopy(){
   const doc=current();if(!doc){status('Сначала загрузи PDF.',true);return;}
   const JsPDF=window.jspdf?.jsPDF;if(!JsPDF){status('Библиотека экспорта PDF недоступна.',true);return;}
+  // Apply company data automatically when downloading, even when the user
+  // did not click the intermediate «Применить ко всем страницам» button.
+  const rules=replacementRules();
+  const working=doc.edited.map(page=>textWithReplacements(page,rules).text);
+  const modified=working.some((text,i)=>text!==doc.pages[i]);
+  if(!modified){status('Редактируемый PDF пока совпадает с исходником: введи старое название, новые реквизиты или измени текст на странице. Неизменённый файл не скачивается.',true);return;}
   const pdf=new JsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
   try{
    for(const [name,file] of [['InterR','Inter-Regular.ttf'],['InterSB','Inter-SemiBold.ttf']]){
@@ -217,13 +233,13 @@
   }catch(error){status('Не удалось загрузить шрифты: '+error.message,true);return;}
   let first=true;
   const width=167,margin=21;
-  for(let sourcePage=0;sourcePage<doc.edited.length;sourcePage++){
+  for(let sourcePage=0;sourcePage<working.length;sourcePage++){
    if(!first)pdf.addPage();first=false;
    let y=22;
    pdf.setFont('InterSB','normal');pdf.setFontSize(8);pdf.setTextColor(108,57,37);
    pdf.text('WORKING DRAFT — FOR LEGAL REVIEW ONLY',margin,13);
    pdf.setFont('InterR','normal');pdf.setFontSize(8);pdf.setTextColor(50,50,50);
-   const lines=pdf.splitTextToSize(doc.edited[sourcePage]||'',width);
+   const lines=pdf.splitTextToSize(working[sourcePage]||'',width);
    for(const line of lines){
     if(y>272){
      pdf.addPage();y=22;
@@ -235,7 +251,9 @@
    }
   }
   pdf.save('legal_review_'+safeFilename(TYPES[active].name)+'.pdf');
-  status('Рабочий PDF создан. Его вёрстка отличается от оригинала. Исходный документ остался неизменным.');
+  doc.edited=working;
+  pagesPreview(doc);
+  status('Рабочий PDF с изменённым текстом создан. Реквизиты автоматически подставлены. Вёрстка отличается от оригинала; исходник сохранён без изменений.');
  }
  input.addEventListener('change',event=>{const f=event.target.files?.[0];event.target.value='';parseFile(f);});
  $('contracts-source-apply').addEventListener('click',applyReplacement);
