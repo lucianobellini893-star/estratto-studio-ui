@@ -40,18 +40,39 @@
   }
   return rows;
  }
+ // Keep character offsets while normalising runs split at arbitrary PDF glyph boundaries.
+ function searchable(value){
+  const src=String(value).normalize('NFKC').replace(/[\u00a0\u2007\u202f]/g,' ');
+  let result='',offsets=[],space=false;
+  for(let i=0;i<src.length;i++){
+   const ch=src[i];
+   if(/\s/.test(ch)){
+    if(!space&&result.length){result+=' ';offsets.push(i);}
+    space=true;continue;
+   }
+   result+=ch.toLocaleLowerCase('en-US');offsets.push(i);space=false;
+  }
+  return {text:result,offsets};
+ }
  function occurrences(rows,rules){
   const hits=[],coverage=Object.fromEntries(rules.map(r=>[r.key,0]));
   for(const row of rows){
-   const reserved=[];
+   const normal=searchable(row.text),reserved=[];
    for(const rule of rules){
-    let offset=0,at;
-    while((at=row.text.indexOf(rule.old,offset))!==-1){
-     const end=at+rule.old.length;offset=end;
+    const needle=searchable(rule.old).text.trim();
+    if(!needle)continue;
+    let start=0,at;
+    while((at=normal.text.indexOf(needle,start))!==-1){
+     const end=at+needle.length;
+     start=end;
+     // Do not replace a brand fragment inside a longer alphanumeric identifier.
+     if(at>0&&/[a-z0-9]/i.test(normal.text[at-1])&&/[a-z0-9]/i.test(needle[0]))continue;
+     if(end<normal.text.length&&/[a-z0-9]/i.test(normal.text[end])&&/[a-z0-9]/i.test(needle[needle.length-1]))continue;
      if(reserved.some(([lo,hi])=>at<hi&&end>lo))continue;
+     const beginChar=normal.offsets[at],endChar=normal.offsets[end-1]+1;
      const slices=[];
      for(const span of row.spans){
-      const lo=Math.max(at,span.start),hi=Math.min(end,span.end);
+      const lo=Math.max(beginChar,span.start),hi=Math.min(endChar,span.end);
       if(lo>=hi)continue;
       const len=Math.max(1,span.end-span.start);
       slices.push({...span.run,x:span.run.x+span.run.width*(lo-span.start)/len,width:span.run.width*(hi-lo)/len});
@@ -124,6 +145,7 @@
    canvas.width=0;canvas.height=0;page.cleanup?.();
   }
   if(!output)throw Error('Не найдены страницы PDF.');
+  if(!Object.values(coverage).some(count=>count>0))throw Error('В PDF не найдены совпадения для замены. Изменённый файл не создан. Проверь точное исходное название компании и текст в PDF.');
   output.setProperties({title:'Working Draft — Legal Review',subject:'Source PDF visual layout preserved as flattened pages; company field substitutions applied.',creator:'Estratto Studio'});
   return {pdf:output,coverage,compressed,pages:sourcePdf.numPages};
  }
