@@ -22,7 +22,7 @@
  stored.expandedAgreementV1=true;
  let selected=core.types.some(type=>type.id===stored.selected)?stored.selected:'agreement';
  let logoData='',logoVersion=0,updating=false; // PNG is regenerated from the shared SVG editor instead of stored twice.
- function save(){try{localStorage.setItem(KEY,JSON.stringify({profile,overrides,selected,expandedAgreementV1:true}));}catch(error){status('Не удалось сохранить данные договора: возможно, хранилище браузера переполнено. Логотип теперь сохраняется в общем редакторе SVG, а не дублируется в настройках договора.',true)}}
+ function save(){try{localStorage.setItem(KEY,JSON.stringify({profile,overrides,selected,expandedAgreementV1:true,companyTokensV1:true}));}catch(error){status('Не удалось сохранить данные договора: возможно, хранилище браузера переполнено. Логотип теперь сохраняется в общем редакторе SVG, а не дублируется в настройках договора.',true)}}
  function status(text,error=false){const el=$('contracts-status');el.textContent=text||'';el.classList.toggle('err',error);}
  function el(tag,cls,value){
    const element=document.createElement(tag);
@@ -144,11 +144,42 @@
      $('contracts-color-secondary').value=profile.accentSecondary;save();render();
    });
  }
+ // Text edits store named tokens instead of hard-coded company data.
+ // This ensures changing a company field updates every clause, including custom edits.
+ const fieldsToLink=['companyName','companyAddress','companyCountry','companyRegistration','companyEmail','companyWebsite','regulator','authorization','governingLaw','jurisdiction','complaintsEmail','protectionScheme','services','products','feeSchedule','signatureMethod','clientName','clientId','accountId','clientCountry'];
+ const tokenFor=name=>'{{'+name+'}}';
+ function literalReplace(source,needle,substitute){
+   return needle?String(source).split(needle).join(substitute):String(source);
+ }
+ function templateFromText(text,oldProfile=profile){
+   let source=String(text);
+   // Do not convert short, ambiguous values (e.g. UK, ID) that might occur as normal words.
+   const filled=fieldsToLink.map(name=>({name,value:String(oldProfile[name]||'').trim()}))
+     .filter(item=>item.value.length>=5).sort((a,b)=>b.value.length-a.value.length);
+   for(const item of filled)source=literalReplace(source,item.value,tokenFor(item.name));
+   return source;
+ }
+ function applyTemplate(text){
+   return String(text).replace(/\{\{([a-zA-Z][a-zA-Z0-9]*)\}\}/g,(token,name)=>
+     fieldsToLink.includes(name)?String(profile[name]||'[TO BE COMPLETED]'):token);
+ }
+ function ensureCompanyTokens(){
+   if(stored.companyTokensV1)return;
+   // Preserve edits and migrate values as far as possible, without altering the standard text.
+   for(const edits of Object.values(overrides)){
+     if(!edits||typeof edits!=='object')continue;
+     for(const [key,value] of Object.entries(edits))if(typeof value==='string')edits[key]=templateFromText(value);
+   }
+   stored.companyTokensV1=true;
+ }
  function sectionsFor(type){
    const document=core.build(type,profile);
    const edits=overrides[type]||{};
    document.sections=document.sections.map((section,i)=>({
-     ...section,paragraphs:section.paragraphs.map((paragraph,j)=>Object.prototype.hasOwnProperty.call(edits,i+':'+j)?edits[i+':'+j]:paragraph)
+     ...section,paragraphs:section.paragraphs.map((paragraph,j)=>{
+       const key=i+':'+j;
+       return Object.prototype.hasOwnProperty.call(edits,key)?applyTemplate(edits[key]):paragraph;
+     })
    }));
    return document;
  }
@@ -219,7 +250,7 @@
        const area=el('textarea');area.rows=3;area.value=paragraph;area.maxLength=6000;
        area.addEventListener('input',()=>{
          overrides[selected]=overrides[selected]||{};
-         overrides[selected][i+':'+j]=area.value;
+         overrides[selected][i+':'+j]=templateFromText(area.value);
          save();
          // Editing doesn't re-create focused textarea or move cursor.
          renderDocumentOnly();
@@ -370,7 +401,7 @@
    if(!confirm('Сбросить изменения текста выбранного шаблона? Реквизиты компании сохранятся.'))return;
    delete overrides[selected];save();render();status('Текст восстановлен по шаблону.');
  });
- ensureLogo();fields();connectDesignControls();save();render();
+ ensureLogo();ensureCompanyTokens();fields();connectDesignControls();save();render();
  if($('page-contracts').classList.contains('active'))moveSharedLogoToContracts();
  else scheduleLogoSync();
 })();
