@@ -28,9 +28,23 @@
    if(!line){line={baseline:run.baseline,font:run.font,runs:[]};rows.push(line);}
    line.runs.push(run);
   }
-  rows.sort((a,b)=>a.baseline-b.baseline);
+  // PDF tables often place two independent text columns on the same Y line.
+  // Do not clear across column boundaries when rewriting one cell.
+  const segmented=[];
   for(const row of rows){
-   row.runs.sort((a,b)=>a.x-b.x);let line='',prev=null,spans=[];
+   row.runs.sort((a,b)=>a.x-b.x);
+   let segment=[],previous=null;
+   const flush=()=>{if(segment.length)segmented.push({baseline:segment[0].baseline,font:segment[0].font,runs:segment});};
+   for(const run of row.runs){
+    const gap=previous?run.x-(previous.x+previous.width):0;
+    if(previous&&gap>Math.max(24,Math.max(previous.font,run.font)*3.5)){flush();segment=[];}
+    segment.push(run);previous=run;
+   }
+   flush();
+  }
+  segmented.sort((a,b)=>a.baseline-b.baseline||a.runs[0].x-b.runs[0].x);
+  for(const row of segmented){
+   let line='',prev=null,spans=[];
    for(const run of row.runs){
     const gap=prev?run.x-(prev.x+prev.width):0;
     if(prev&&gap>Math.max(1.2,Math.min(prev.font,run.font)*.14)&&!line.endsWith(' ')&&!run.str.startsWith(' '))line+=' ';
@@ -38,7 +52,7 @@
    }
    row.text=line;row.spans=spans;
   }
-  return rows;
+  return segmented;
  }
  // Keep character offsets while normalising runs split at arbitrary PDF glyph boundaries.
  function searchable(value){
@@ -129,7 +143,7 @@
    const foreground=bg.reduce((sum,v)=>sum+v,0)>570?'#171717':'#ffffff';
    const bold=/bold|heavy|black/i.test(String(runs[0].fontName||''))||
      (font>19&&row.text.length<70);
-   let size=font*(font>18?.94:.88);
+   let size=font*(font>18?.98:.96);
    const originalSize=size;
    const available=Math.max(5,Math.min(ctx.canvas.width-12,right+Math.max(4,font*.5))-left);
    const fontSpec=()=>String(bold?'bold ':'')+size+'px Arial, sans-serif';
