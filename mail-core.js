@@ -51,6 +51,8 @@
     const words=name.split(/\s+/).filter(Boolean);
     const displayName=words.length>1?words.slice(0,-1).join(' ')+' <span style="color:#c99b58;">'+words[words.length-1]+'</span>':name;
     const signatureLogo=options.signatureLogoSource||png(state.signatureLogoData);
+    const logoWidth=Math.min(245,Math.max(80,Number(state.signatureLogoWidth)||175));
+    const logoColumnWidth=Math.min(260,logoWidth+20);
     const job=safe(state.signatureRole||'',130);
     const company=safe(state.footerCompany||'',100);
     const phone=safe(state.signaturePhone||'',60);
@@ -74,14 +76,14 @@
       +'<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;border-collapse:collapse;">'
       +row('☎',phone,phoneHref)+row('✉',mail,emailHref)+row('⌖',address,'')+'</table></td></tr></table>';
     const brand=signatureLogo
-      ?'<img src="'+escape(signatureLogo)+'" width="105" height="55" alt="'+(company||'Company logo')+'" style="display:block;width:105px;height:55px;max-width:100%;object-fit:contain;margin:0 auto 12px;border:0;">'
+      ?'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;width:100%;"><tr><td align="center" style="text-align:center;padding:0 0 12px;"><img src="'+escape(signatureLogo)+'" width="'+logoWidth+'" alt="'+(company||'Company logo')+'" style="display:block;width:'+logoWidth+'px;max-width:100%;height:auto;max-height:130px;object-fit:contain;margin:0 auto;border:0;"></td></tr></table>'
       :'<div style="border:1px dashed #666;border-radius:5px;padding:12px 4px;text-align:center;color:#aaa;font-size:11px;margin-bottom:12px;">'+(company||'YOUR LOGO')+'</div>';
     return '<tr><td style="padding:24px 0 0;">'
       +'<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" bgcolor="#050505" style="width:100%;max-width:760px;min-height:165px;background-color:#050505;border:1px solid #252525;border-radius:12px;border-collapse:separate;overflow:hidden;">'
       +'<tr><td valign="middle" style="padding:17px;">'
       +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;"><tr>'
       +'<td valign="middle" style="padding:0 14px 0 0;">'+identity+'</td>'
-      +'<td valign="middle" width="135" style="width:135px;min-width:135px;border-left:1px solid #555;padding:4px 0 4px 15px;text-align:center;">'+brand+'<div style="white-space:nowrap;">'+socials+'</div></td>'
+      +'<td valign="middle" align="center" width="'+logoColumnWidth+'" style="width:'+logoColumnWidth+'px;border-left:1px solid #555;padding:4px 0 4px 15px;text-align:center;">'+brand+'<div style="text-align:center;white-space:nowrap;">'+socials+'</div></td>'
       +'</tr></table></td></tr></table></td></tr>';
   }
   function build(state,options={}){
