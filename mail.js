@@ -3,7 +3,7 @@
   'use strict';
   const core=window.EstrattoMail,shared=window.EstrattoDocument,$=id=>document.getElementById(id),key='estratto-mail.v1';
   let saved={};try{saved=JSON.parse(localStorage.getItem(key)||'{}')||{};}catch(_){}
-  const state={title:'',text:'',logoUrl:'',logoHeight:32,layout:'horizontal',parts:[],footerEnabled:false,footerStyle:'card',footerLabel:'Powered by',footerCompany:'',signatureName:'',signatureRole:'',signaturePhone:'',signatureEmail:'',signatureAddress:'',signatureLinkedin:'',signatureWhatsapp:'',signatureTelegram:'',signatureInstagram:'',signaturePhoto:'',...saved,logoData:''};
+  const state={title:'',text:'',logoUrl:'',logoHeight:32,layout:'horizontal',parts:[],footerEnabled:false,footerStyle:'card',footerLabel:'Powered by',footerCompany:'',signatureName:'',signatureRole:'',signaturePhone:'',signatureEmail:'',signatureAddress:'',signatureLinkedin:'',signatureWhatsapp:'',signatureTelegram:'',signatureInstagram:'',signaturePhoto:'',signatureLogoData:'',...saved,logoData:''};
   if(!Array.isArray(state.parts))state.parts=[];
   state.parts=state.parts.slice(0,4);let sequence=0,busy=false,timer;
   const options={fontBase:new URL('fonts/',location.href).href};
@@ -102,6 +102,14 @@
       photoPreview.append(image);
     }else photoPreview.textContent='Фото';
     $('mail-signature-photo-remove').disabled=!state.signaturePhoto;
+    const signPreview=$('mail-signature-logo-preview');
+    signPreview.replaceChildren();
+    if(state.signatureLogoData){
+      const img=document.createElement('img');
+      img.src=state.signatureLogoData;img.alt='Логотип подписи';img.style.cssText='width:105px;height:55px;max-width:100%;object-fit:contain;display:block;';
+      signPreview.append(img);
+    }else signPreview.textContent='YOUR LOGO';
+    $('mail-signature-logo-remove').disabled=!state.signatureLogoData;
     $('mail-frame').srcdoc=core.build(state,{...options,preview:true,placeholder:true}).html;
     $('mail-code').value=core.build(state,options).html;
     $('mail-logo-size-value').textContent=state.logoHeight+' px';
@@ -319,6 +327,29 @@
   $('mail-signature-photo-remove').addEventListener('click',()=>{
     state.signaturePhoto='';persist();refresh();
     message('mail-export-message','Фотография удалена из подписи.');
+  });
+  $('mail-signature-logo-file').addEventListener('change',async event=>{
+    const file=event.target.files?.[0];event.target.value='';
+    if(!file)return;
+    if(!/\.svg$/i.test(file.name)||file.size>1024*1024){
+      message('mail-export-message','Для логотипа подписи выбери SVG-файл размером до 1 МБ.',true);return;
+    }
+    try{
+      const raw=await file.text();
+      const svg=shared.sanitizeSvg(raw);
+      const clean=new XMLSerializer().serializeToString(svg);
+      const picture=await shared.rasterizeSvg(clean);
+      if(!picture?.dataUrl)throw new Error('Не удалось обработать SVG.');
+      state.signatureLogoData=picture.dataUrl;
+      persist();refresh();
+      message('mail-export-message','SVG-логотип добавлен справа в подпись.');
+    }catch(error){
+      message('mail-export-message','Не удалось прочитать SVG-логотип: '+(error?.message||'ошибка'),true);
+    }
+  });
+  $('mail-signature-logo-remove').addEventListener('click',()=>{
+    state.signatureLogoData='';persist();refresh();
+    message('mail-export-message','Логотип подписи удалён.');
   });
 
   $('mail-logo-file').addEventListener('change',event=>upload(event.target,false));
