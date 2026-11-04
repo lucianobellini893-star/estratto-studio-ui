@@ -17,7 +17,7 @@
    const dx=v[0]*t[0]+v[2]*t[1],dy=v[1]*t[0]+v[3]*t[1];
    if(Math.abs(dy)>Math.abs(dx)*.20)continue;
    const font=Math.max(2,Math.hypot(v[0]*t[2]+v[2]*t[3],v[1]*t[2]+v[3]*t[3]));
-   out.push({str:String(item.str),x,baseline,width:Math.abs(item.width)*scale,font,top:baseline-font*.91,bottom:baseline+font*.24});
+   out.push({str:String(item.str),x,baseline,width:Math.abs(item.width)*scale,font,fontName:item.fontName||'',top:baseline-font*.91,bottom:baseline+font*.24});
   }
   return out;
  }
@@ -77,7 +77,7 @@
       const len=Math.max(1,span.end-span.start);
       slices.push({...span.run,x:span.run.x+span.run.width*(lo-span.start)/len,width:span.run.width*(hi-lo)/len});
      }
-     if(slices.length){reserved.push([at,end]);hits.push({rule,slices});coverage[rule.key]++;}
+     if(slices.length){reserved.push([at,end]);hits.push({rule,slices,row,startChar:beginChar,endChar});coverage[rule.key]++;}
     }
    }
   }
@@ -95,36 +95,70 @@
   let chosen='255,255,255',count=0;for(const [k,n] of counts)if(n>count){chosen=k;count=n;}
   return chosen.split(',').map(Number);
  }
+
+ // Repaint each affected complete text line. Painting replacements inside
+ // old glyph rectangles caused leftover characters and text collisions.
  function drawHits(ctx,hits){
-  let compressed=0;
+  const groups=new Map();
   for(const hit of hits){
-   const parts=hit.slices;
-   const top=Math.min(...parts.map(p=>p.top)),bottom=Math.max(...parts.map(p=>p.bottom));
-   const left=Math.min(...parts.map(p=>p.x)),right=Math.max(...parts.map(p=>p.x+p.width));
-   const font=Math.max(...parts.map(p=>p.font)),width=right-left;
-   if(width<2)continue;
-   const bg=sampleBackground(ctx,left-1,top-1,width+2,bottom-top+2);
-   const light=bg.reduce((a,b)=>a+b,0)>430;
-   ctx.fillStyle='rgb('+bg.join(',')+')';
-   ctx.fillRect(left-1,top-1,width+2,bottom-top+2);
-   let size=font*.92;ctx.font=size+'px Arial, sans-serif';
-   while(size>font*.63&&ctx.measureText(hit.rule.newText).width>width*.98){size-=.5;ctx.font=size+'px Arial, sans-serif';}
-   const actual=ctx.measureText(hit.rule.newText).width;
-   const stretch=actual>width*.99?width*.99/actual:1;
-   if(stretch<.78)compressed++;
-   ctx.save();
-   ctx.fillStyle=light?'#161616':'#ffffff';
-   ctx.translate(left,parts[0].baseline);ctx.scale(stretch,1);
-   ctx.fillText(hit.rule.newText,0,0);ctx.restore();
+   const row=hit.row;
+   if(!groups.has(row))groups.set(row,[]);
+   groups.get(row).push(hit);
   }
-  return compressed;
+  let compressed=0,skipped=0,repairs=0;
+  for(const [row,group] of groups){
+   const runs=row.runs;
+   if(!runs?.length){skipped+=group.length;continue;}
+   const left=Math.max(0,Math.min(...runs.map(r=>r.x)));
+   const right=Math.min(ctx.canvas.width,Math.max(...runs.map(r=>r.x+r.width)));
+   const font=Math.max(...runs.map(r=>r.font));
+   const baseline=row.baseline;
+   const top=Math.max(0,Math.min(...runs.map(r=>r.top))-Math.max(1.5,font*.12));
+   const bottom=Math.min(ctx.canvas.height,Math.max(...runs.map(r=>r.bottom))+Math.max(1.5,font*.10));
+   if(!(right>left+3&&bottom>top+3)){skipped+=group.length;continue;}
+   const replacement=group.slice().sort((a,b)=>b.startChar-a.startChar);
+   let rewritten=row.text;
+   for(const hit of replacement){
+    rewritten=rewritten.slice(0,hit.startChar)+hit.rule.newText+rewritten.slice(hit.endChar);
+   }
+   if(rewritten===row.text)continue;
+   // Sample outside original glyphs rather than over dark pixels.
+   const sampleX=Math.max(0,Math.floor(left-5));
+   const sampleY=Math.max(0,Math.floor(top+2));
+   const bg=sampleBackground(ctx,sampleX,sampleY,Math.min(3,ctx.canvas.width-sampleX),Math.min(3,bottom-top-2));
+   const foreground=bg.reduce((sum,v)=>sum+v,0)>570?'#171717':'#ffffff';
+   const bold=/bold|heavy|black/i.test(String(runs[0].fontName||''))||
+     (font>19&&row.text.length<70);
+   let size=font*(font>18?.94:.88);
+   const originalSize=size;
+   const available=Math.max(5,Math.min(ctx.canvas.width-12,right+Math.max(4,font*.5))-left);
+   const fontSpec=()=>String(bold?'bold ':'')+size+'px Arial, sans-serif';
+   ctx.save();
+   ctx.font=fontSpec();
+   while(size>Math.max(6,font*.69)&&ctx.measureText(rewritten).width>available){
+    size-=.35;ctx.font=fontSpec();
+   }
+   const measured=ctx.measureText(rewritten).width;
+   const stretch=measured>available?available/measured:1;
+   if(size<originalSize*.9||stretch<.95)compressed++;
+   ctx.fillStyle='rgb('+bg.join(',')+')';
+   ctx.fillRect(Math.max(0,left-1.5),top,Math.min(ctx.canvas.width-left+1.5,right-left+3),bottom-top);
+   ctx.fillStyle=foreground;
+   ctx.translate(left,baseline);
+   ctx.scale(stretch,1);
+   ctx.font=fontSpec();
+   ctx.fillText(rewritten,0,0);
+   ctx.restore();
+   repairs++;
+  }
+  return {compressed,skipped,repairs};
  }
  async function exportPdf(source,rules,progress){
   const JsPDF=window.jspdf?.jsPDF;
   if(!JsPDF||!window.pdfjsLib)throw Error('Не загрузились библиотеки для PDF.');
   const sourcePdf=await pdfjsLib.getDocument({data:new Uint8Array(source.bytes)}).promise;
   const coverage=Object.fromEntries(rules.map(r=>[r.key,0]));
-  let output=null,compressed=0;
+  let output=null,compressed=0,skipped=0,repairedLines=0;
   for(let i=1;i<=sourcePdf.numPages;i++){
    progress?.(i,sourcePdf.numPages);
    const page=await sourcePdf.getPage(i),natural=page.getViewport({scale:1}),viewport=page.getViewport({scale:SCALE});
@@ -137,7 +171,8 @@
     const content=await page.getTextContent();
     const found=occurrences(buildLines(createRuns(content,viewport)),rules);
     for(const [key,value] of Object.entries(found.coverage))coverage[key]+=value;
-    compressed+=drawHits(ctx,found.hits);
+    const cleanup=drawHits(ctx,found.hits);
+    compressed+=cleanup.compressed;skipped+=cleanup.skipped;repairedLines+=cleanup.repairs;
    }
    if(!output)output=new JsPDF({unit:'pt',format:[natural.width,natural.height],orientation:natural.width>natural.height?'landscape':'portrait',compress:true});
    else output.addPage([natural.width,natural.height],natural.width>natural.height?'landscape':'portrait');
@@ -147,7 +182,7 @@
   if(!output)throw Error('Не найдены страницы PDF.');
   if(!Object.values(coverage).some(count=>count>0))throw Error('В PDF не найдены совпадения для замены. Изменённый файл не создан. Проверь точное исходное название компании и текст в PDF.');
   output.setProperties({title:'Working Draft — Legal Review',subject:'Source PDF visual layout preserved as flattened pages; company field substitutions applied.',creator:'Estratto Studio'});
-  return {pdf:output,coverage,compressed,pages:sourcePdf.numPages};
+  return {pdf:output,coverage,compressed,skipped,repairedLines,pages:sourcePdf.numPages};
  }
  return {getRules,createRuns,buildLines,occurrences,exportPdf};
 });
