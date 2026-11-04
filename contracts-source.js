@@ -26,7 +26,7 @@
  const docs={};
  let active='agreement';
  let cycle=0;
- function status(value,error=false){const target=$('contracts-source-status');target.textContent=value;target.classList.toggle('err',error);}
+ function status(value,error=false){for(const id of ['contracts-source-status','contracts-source-feedback']){const target=$(id);if(target){target.textContent=value;target.classList.toggle('err',error);}}}
  function n(tag,cls,text){const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el;}
  function currentType(){
   const activeButton=$('contracts-type-list')?.querySelector('[data-contract-type].active');
@@ -38,6 +38,29 @@
    result[key]=document.querySelector('[data-contract-field="'+key+'"]')?.value.trim()||'';
   }
   return result;
+ }
+ function detectCompanyNames(pages){
+  const all=pages.join('\n').replace(/\s+/g,' ');
+  return ['Interactive Brokers (U.K.) Limited','Interactive Brokers LLC','Interactive Brokers UK Limited','Interactive Brokers Group, Inc.','IBUK','IBLLC']
+   .filter(name=>all.toLowerCase().includes(name.toLowerCase()));
+ }
+ function syncCompanyName(){
+  const value=$('contracts-source-company-new')?.value.trim();
+  if(!value)return;
+  const field=document.querySelector('[data-contract-field="companyName"]');
+  if(field&&field.value!==value){field.value=value;field.dispatchEvent(new Event('input',{bubbles:true}));}
+  const label=document.querySelector('[data-source-to="companyName"]');if(label)label.textContent=value;
+ }
+ function fillCompanySelector(doc){
+  const select=$('contracts-source-company-old');if(!select)return;
+  const names=doc?.candidates||[],chosen=doc?.old?.companyName||'';
+  select.replaceChildren();
+  const first=document.createElement('option');first.value='';first.textContent='Выбери название из PDF…';select.append(first);
+  for(const name of names){const option=document.createElement('option');option.value=name;option.textContent=name;select.append(option);}
+  if(chosen&&!names.includes(chosen)){const option=document.createElement('option');option.value=chosen;option.textContent=chosen+' (введено вручную)';select.append(option);}
+  select.value=chosen;
+  const guide=$('contracts-source-company-guide');
+  if(guide)guide.textContent=names.length?'Найдено в PDF: '+names.join(' · ')+'. IBUK и IBLLC — разные юридические лица, заменяй осознанно.':'Известных названий не найдено. Впиши старое имя вручную в поле «Исходный текст: Название компании».';
  }
  function download(blob,name){
   const link=document.createElement('a'),url=URL.createObjectURL(blob);
@@ -70,8 +93,8 @@
   for(const [key,title] of FIELDS)list.append(makeRule(key,title));
   list.addEventListener('input',()=>{
    const doc=current();if(!doc)return;
-   doc.old={};
    for(const inp of list.querySelectorAll('[data-source-old]'))doc.old[inp.dataset.sourceOld]=inp.value;
+   if(document.activeElement?.dataset?.sourceOld==='companyName')fillCompanySelector(doc);
   });
  }
  function pagesPreview(doc){
@@ -94,6 +117,8 @@
   const doc=current(),exists=!!doc;
   $('contracts-source-controls').hidden=!exists;
   const p=profile();
+  const quick=$('contracts-source-company-new');if(quick&&document.activeElement!==quick)quick.value=p.companyName||'';
+  fillCompanySelector(doc);
   for(const [key] of FIELDS){
    const dest=document.querySelector('[data-source-to="'+key+'"]');
    if(dest)dest.textContent=p[key]||'Не заполнено в профиле';
@@ -107,6 +132,7 @@
  }
  function safeFilename(str){return String(str||'document').replace(/[^a-z0-9_-]+/gi,'_').slice(0,75);}
  function replacementRules(){
+  syncCompanyName();
   const values=profile();
   const engine=window.EstrattoPdfLayout;
   if(engine&&current())return engine.getRules(current(),values,FIELDS);
@@ -170,7 +196,7 @@
    const count=pages.reduce((sum,page)=>sum+page.trim().length,0);
    if(count<100)throw new Error('PDF не содержит извлекаемого текста. Возможно, он является сканом и требует OCR.');
    const target=currentType();
-   docs[target]={filename:file.name,bytes,blob:new Blob([bytes],{type:'application/pdf'}),pages,edited:[...pages],old:{},manuallyEdited:false};
+   docs[target]={filename:file.name,bytes,blob:new Blob([bytes],{type:'application/pdf'}),pages,edited:[...pages],old:{},manuallyEdited:false,candidates:detectCompanyNames(pages)};
    active=target;refresh();
   }catch(e){
    status('Не удалось прочитать PDF: '+(e?.message||'ошибка документа'),true);
@@ -255,6 +281,13 @@
   pagesPreview(doc);
   status('Рабочий PDF с изменённым текстом создан. Реквизиты автоматически подставлены. Вёрстка отличается от оригинала; исходник сохранён без изменений.');
  }
+ $('contracts-source-company-new').addEventListener('input',()=>{
+  syncCompanyName();status('Новое название сохранено. Выбери старое название из PDF и нажми «Применить ко всем страницам».');
+ });
+ $('contracts-source-company-old').addEventListener('change',()=>{
+  const doc=current();if(doc){doc.old.companyName=$('contracts-source-company-old').value;const field=document.querySelector('[data-source-old="companyName"]');if(field)field.value=doc.old.companyName;}
+  status(doc?.old.companyName?'Старое название выбрано: '+doc.old.companyName+'. Нажми «Применить ко всем страницам».':'Выбери старое название из PDF.');
+ });
  input.addEventListener('change',event=>{const f=event.target.files?.[0];event.target.value='';parseFile(f);});
  $('contracts-source-apply').addEventListener('click',applyReplacement);
  $('contracts-source-export').addEventListener('click',exportPreservingLayout);
