@@ -343,6 +343,17 @@
               <div class="contracts-rule"></div>
               <div class="contracts-label">МАССОВАЯ ЗАМЕНА ДАННЫХ КОМПАНИИ</div>
               <p class="hint">В левом поле — реквизит из исходного PDF; значение справа берётся из профиля компании. Не заменяй автоматически сведения о сторонних брокерах, хранителях и регуляторах, пока юрист не определит их роль.</p>
+              <div class="contracts-source-quick">
+                <label class="contracts-field">Новое название твоей компании
+                  <input type="text" id="contracts-source-company-new" autocomplete="off" placeholder="Введи своё название компании здесь">
+                </label>
+                <label class="contracts-field">Название в загруженном PDF, которое заменить
+                  <select id="contracts-source-company-old">
+                    <option value="">Выбери найденное название…</option>
+                  </select>
+                </label>
+                <p class="hint" id="contracts-source-company-guide">Названия компаний из PDF появятся после загрузки файла. Разные юридические лица нужно проверять отдельно.</p>
+              </div>
               <div id="contracts-source-rules"></div>
               <div class="contracts-toolbar">
                 <button type="button" class="btn small" id="contracts-source-apply">Применить ко всем страницам</button>
@@ -351,6 +362,7 @@
                 <button type="button" class="btn small" id="contracts-source-original">Скачать неизменённый исходник</button>
                 <button type="button" class="btn small" id="contracts-source-remove">Убрать импорт</button>
               </div>
+              <p class="hint">Для замены названия достаточно двух полей выше. Нажми «Применить ко всем страницам» — внизу сразу увидишь изменённый текст и количество замен.</p>
               <p class="hint"><strong>В дизайне оригинала:</strong> все изображения, заголовки, таблицы, отступы и оформление остаются на прежних местах; автоматически заменяются только реквизиты по правилам выше. Такой PDF формируется из изображений исходных страниц, текст не выделяется, электронные подписи и интерактивные поля не сохраняются. Если новое название длиннее исходного, оно может уменьшаться. <strong>Для правок любого текста</strong> используй отдельную кнопку — она пересобирает страницы и не сохраняет исходную вёрстку. Оба варианта предназначены для проверки юристом.</p>
               <div class="contracts-source-pages" id="contracts-source-pages"></div>
             </div>
@@ -1693,7 +1705,7 @@ renderLogoParts();
 <script src="contracts-clauses.js?v=20261104-longform1"></script>
 <script src="contracts-core.js?v=20261104-longform1"></script>
 <script src="contracts.js?v=20261104-autofill2"></script>
-<script src="contracts-source-layout.js?v=20261104-visual1"></script>
-<script src="contracts-source.js?v=20261104-visual1"></script>
+<script src="contracts-source-layout.js?v=20261104-fixbuttons2"></script>
+<script src="contracts-source.js?v=20261104-fixbuttons2"></script>
 </body>
 </html>
