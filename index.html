@@ -308,8 +308,8 @@
             </div>
             <div id="contracts-fields" style="margin-top:14px"></div>
             <div class="contracts-rule"></div>
-            <label class="contracts-field">Логотип для договора (SVG, PNG, JPG)<input type="file" id="contracts-logo-file" accept=".svg,image/svg+xml,.png,image/png,.jpg,.jpeg,image/jpeg"></label>
-            <p class="hint">По умолчанию используется логотип из редактора выписки. Новый загруженный логотип применяется только к договорам.</p>
+            <p class="hint">Это тот же редактор SVG, что в «Выписках»: кликните по тексту или символу, выберите цвет, настройте масштаб частей и их расположение. Логотип один для всех документов компании.</p>
+            <div id="contracts-logo-slot"></div>
           </section>
         </div>
         <section class="contracts-panel">
@@ -1656,6 +1656,6 @@ renderLogoParts();
 <script src="workspace.js?v=20261029-account-scope"></script>
 <script src="contracts-expanded.js?v=20261104-expanded1"></script>
 <script src="contracts-core.js?v=20261104-expanded1"></script>
-<script src="contracts.js?v=20261104-expanded1"></script>
+<script src="contracts.js?v=20261104-shared-logo"></script>
 </body>
 </html>
