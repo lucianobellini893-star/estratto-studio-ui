@@ -277,6 +277,11 @@
    updating=false;
  }
  async function exportPdf(){
+   // When an original PDF is loaded, export that source with replacements.
+   // The template generator must never be offered as a "copy of the original".
+   if(window.EstrattoSourcePdf?.hasCurrent?.()){
+     return window.EstrattoSourcePdf.exportCurrent();
+   }
    // Ensure the PDF contains the current colours, component scales and layout.
    clearTimeout(logoSyncTimer);
    await syncSharedLogo(true);
