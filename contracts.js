@@ -9,7 +9,7 @@
    companyEmail:'',companyWebsite:'',regulator:'',authorization:'',protectionScheme:'',
    governingLaw:'',jurisdiction:'',complaintsEmail:'',services:'',products:'',
    feeSchedule:'',signatureMethod:'',clientName:'',clientId:'',accountId:'',clientCountry:'',
-   issueDate:new Date().toISOString().slice(0,10)
+   issueDate:new Date().toISOString().slice(0,10),accentPrimary:'#085F94',accentSecondary:'#CD1935',versionLabel:'1.0'
  };
  let stored={};try{stored=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(_){}
  let profile={...defaults,...stored.profile},overrides=stored.overrides&&typeof stored.overrides==='object'?stored.overrides:{};
@@ -85,6 +85,19 @@
    if(changed){save();fields();render();status('Данные компании и клиента взяты из редактора выписки. Проверьте их.');}
    else status('Новых данных для переноса нет. Реквизиты можно заполнить вручную.');
  }
+ function hexToRgb(hex){const m=String(hex||'').match(/^#([0-9a-f]{6})$/i);if(!m)return [8,95,148];return [0,2,4].map(i=>parseInt(m[1].slice(i,i+2),16));}
+ function getBrand(){return {primary:/^#[0-9a-f]{6}$/i.test(profile.accentPrimary)?profile.accentPrimary:'#085F94',secondary:/^#[0-9a-f]{6}$/i.test(profile.accentSecondary)?profile.accentSecondary:'#CD1935'};}
+ function connectDesignControls(){
+   for(const [id,key] of [['contracts-color-primary','accentPrimary'],['contracts-color-secondary','accentSecondary'],['contracts-version-label','versionLabel']]){
+     const control=$(id);control.value=profile[key]||defaults[key];
+     control.addEventListener('input',()=>{profile[key]=control.value;save();render();});
+   }
+   $('contracts-colors-reset').addEventListener('click',()=>{
+     profile.accentPrimary=defaults.accentPrimary;profile.accentSecondary=defaults.accentSecondary;
+     $('contracts-color-primary').value=profile.accentPrimary;
+     $('contracts-color-secondary').value=profile.accentSecondary;save();render();
+   });
+ }
  function sectionsFor(type){
    const document=core.build(type,profile);
    const edits=overrides[type]||{};
@@ -97,7 +110,7 @@
    if(updating)return;
    const doc=sectionsFor(selected);
    $('contracts-selected-title').textContent=doc.title;
-   $('contracts-selected-version').textContent='DRAFT • '+doc.version;
+   $('contracts-selected-version').textContent='DRAFT • '+(profile.versionLabel||doc.version);
    document.querySelectorAll('[data-contract-type]').forEach(button=>button.classList.toggle('active',button.dataset.contractType===selected));
    const missing=$('contracts-missing');
    if(doc.missing.length){
@@ -105,6 +118,7 @@
      missing.hidden=false;
    }else missing.hidden=true;
    const page=$('contracts-document');page.replaceChildren();
+   const colors=getBrand();page.style.setProperty('--contract-primary',colors.primary);page.style.setProperty('--contract-secondary',colors.secondary);
    const top=el('div');
    if(logoData){
      const logo=el('img','contracts-preview-logo');
@@ -113,8 +127,8 @@
    top.append(el('div','contracts-topline'));
    const company=el('p','contracts-meta',(profile.companyName||'[COMPANY]')+' · '+(profile.companyAddress||'[ADDRESS]'));
    top.append(company);page.append(top);
-   page.append(el('h1','',doc.title));
-   page.append(el('p','contracts-meta',doc.englishTitle+' · Versione '+doc.version+' · Data '+(profile.issueDate||'[DA COMPLETARE]')));
+   page.append(el('h1','',selected==='agreement'?(profile.companyName||'Società')+' — Client Agreement':doc.title));
+   page.append(el('p','contracts-meta',doc.englishTitle+' · Versione '+(profile.versionLabel||doc.version)+' · Data '+(profile.issueDate||'[DA COMPLETARE]')));
    const parties=el('div','contracts-parties');
    parties.append(el('strong','',profile.companyName||'[Ragione sociale da compilare]'));
    parties.append(el('div','', 'Cliente: '+(profile.clientName||'[Nome da compilare]')+' · ID: '+(profile.clientId||'[ID da compilare]')));
@@ -122,11 +136,23 @@
    page.append(parties);
    const warning=el('div','contracts-draft-note','BOZZA NON FIRMATA — Questo documento non è un contratto Interactive Brokers e non prova alcuna accettazione. Richiede revisione legale e verifica delle autorizzazioni prima dell’uso con clienti.');
    page.append(warning);
+   const about=el('h2','contracts-intro-title',selected==='agreement'?'About these Terms':'Documento e condizioni');
+   page.append(about);
+   page.append(el('p','',selected==='agreement'?'Il presente testo illustra diritti, obblighi e condizioni che dovranno essere verificati e approvati prima di qualsiasi utilizzo contrattuale.':'Il documento è predisposto in base ai dati inseriti, soggetti a verifica prima dell’utilizzo.'));
+   if(selected==='agreement'){
+     const intro=el('div','contracts-important');
+     intro.append(el('h2','', 'ⓘ Important documents'));
+     intro.append(el('p','', 'Il rapporto contrattuale può richiedere anche i seguenti documenti, da consegnare nelle rispettive versioni approvate:'));
+     const list=el('ul');
+     ['Client Agreement (presente documento)','Account Opening Application','General Risk Disclosure','Express Consent / Electronic Acceptance','Prospetto dei costi e delle commissioni','Privacy Policy e documentazione applicabile'].forEach(label=>list.append(el('li','',label)));
+     intro.append(list);page.append(intro);
+     page.append(el('h2','contracts-section-blue','Our legal relationship'));
+   }
    for(const section of doc.sections){
-     page.append(el('h2','',section.title));
+     page.append(el('h2','contracts-section-heading',section.title));
      for(const paragraph of section.paragraphs)page.append(el('p','',paragraph));
    }
-   page.append(el('div','contracts-footer','BOZZA • Nessuna firma registrata • '+doc.version+' • '+(profile.issueDate||'data da definire')));
+   page.append(el('div','contracts-footer','BOZZA • Nessuna firma registrata • '+(profile.versionLabel||doc.version)+' • '+(profile.issueDate||'data da definire')));
    renderEditor(doc);
  }
  function renderEditor(doc){
@@ -158,14 +184,16 @@
    const y=window.scrollY;
    updating=true;
    const doc=sectionsFor(selected),page=$('contracts-document');page.replaceChildren();
+   const colors=getBrand();page.style.setProperty('--contract-primary',colors.primary);page.style.setProperty('--contract-secondary',colors.secondary);
    if(logoData){const img=el('img','contracts-preview-logo');img.alt='Логотип компании';img.src=logoData;page.append(img);}
    page.append(el('div','contracts-topline'));
    page.append(el('p','contracts-meta',profile.companyName||'[COMPANY]'));
-   page.append(el('h1','',doc.title));
-   page.append(el('p','contracts-meta',doc.englishTitle+' · '+doc.version+' · '+(profile.issueDate||'[DATE]')));
+   page.append(el('h1','',selected==='agreement'?(profile.companyName||'Società')+' — Client Agreement':doc.title));
+   page.append(el('p','contracts-meta',doc.englishTitle+' · '+(profile.versionLabel||doc.version)+' · '+(profile.issueDate||'[DATE]')));
    page.append(el('div','contracts-draft-note','BOZZA NON FIRMATA — Revisione legale necessaria. Nessuna accettazione verificata.'));
-   for(const section of doc.sections){page.append(el('h2','',section.title));for(const paragraph of section.paragraphs)page.append(el('p','',paragraph));}
-   page.append(el('div','contracts-footer','Documento non firmato · '+doc.version));
+   if(selected==='agreement'){page.append(el('h2','contracts-intro-title','About these Terms'));page.append(el('p','','This is an independent contractual draft prepared for the named company.'));page.append(el('h2','contracts-section-blue','Important documents'));page.append(el('p','','Account Opening Application · Risk Disclosure · Express Consent · Policies'));}
+   for(const section of doc.sections){page.append(el('h2','contracts-section-heading',section.title));for(const paragraph of section.paragraphs)page.append(el('p','',paragraph));}
+   page.append(el('div','contracts-footer','Documento non firmato · '+(profile.versionLabel||doc.version)));
    updating=false;
  }
  async function exportPdf(){
@@ -265,5 +293,5 @@
    if(!confirm('Сбросить изменения текста выбранного шаблона? Реквизиты компании сохранятся.'))return;
    delete overrides[selected];save();render();status('Текст восстановлен по шаблону.');
  });
- ensureLogo();fields();save();render();
+ ensureLogo();fields();connectDesignControls();save();render();
 })();
