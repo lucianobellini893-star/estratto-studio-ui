@@ -102,3 +102,10 @@
 #page-contracts .contracts-source-page summary{cursor:pointer;font-size:12px;font-weight:600;margin-bottom:9px}
 #page-contracts .contracts-source-textarea{display:block;width:100%;min-height:170px;resize:vertical;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;color:#222}
 @media(max-width:650px){#page-contracts .contracts-source-rule{grid-template-columns:1fr}}
+
+#page-contracts .contracts-source-quick{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;border:1px solid #cfd9e2;background:#f5f9fc;border-radius:12px;padding:12px;margin:12px 0}
+#page-contracts .contracts-source-quick .hint{grid-column:1/-1;margin:0}
+#page-contracts .contracts-source-quick select,#page-contracts .contracts-source-quick input{width:100%;max-width:100%}
+#page-contracts .contracts-source-feedback{margin:10px 0;padding:10px 12px;background:#eff6ff;border:1px solid #b9d3f4;color:#244b75;font-size:12px;line-height:1.6;border-radius:9px}
+#page-contracts .contracts-source-feedback.err{background:#fff2ef;color:#962f1f;border-color:#ebbbb2}
+@media(max-width:650px){#page-contracts .contracts-source-quick{grid-template-columns:1fr}}
