@@ -32,20 +32,57 @@
  }
  function ensureLogo(){
    const state=shared?.getState?.()||{};
-   const name=(state.coName||'').trim();
-   if(!profile.companyName&&name)profile.companyName=name;
+   if(!profile.companyName&&state.coName)profile.companyName=state.coName;
    if(!profile.companyAddress&&state.coAddr)profile.companyAddress=state.coAddr;
    if(!profile.companyWebsite&&state.coSite)profile.companyWebsite=state.coSite;
    if(!profile.clientName&&state.clientName)profile.clientName=state.clientName;
    if(!profile.clientId&&state.clientId)profile.clientId=state.clientId;
-   if(!logoData&&state.logoSvg&&shared?.sanitizeSvg&&shared?.rasterizeSvg){
-     const version=++logoVersion;
-     shared.rasterizeSvg(shared.sanitizeSvg(state.logoSvg)).then(image=>{
-       if(version!==logoVersion)return;
-       logoData=image.dataUrl; render();
-     }).catch(()=>{});
-   }
  }
+ // Contracts use the SAME logo editor node and SVG state as trade/account PDFs.
+ // Never create a second copy of the editor or a separate logo configuration.
+ let logoSyncTimer=null,lastLogoSvg=null,logoSyncPromise=Promise.resolve();
+ function syncSharedLogo(force=false){
+   const svg=$('logo-stage')?.querySelector('svg');
+   const xml=svg?new XMLSerializer().serializeToString(svg):'';
+   if(!force&&xml===lastLogoSvg)return logoSyncPromise;
+   lastLogoSvg=xml;
+   const generation=++logoVersion;
+   if(!xml){
+     if(logoData){logoData='';save();render();}
+     return Promise.resolve();
+   }
+   const promise=shared.rasterizeSvg(xml).then(result=>{
+     if(generation!==logoVersion)return;
+     if(logoData!==result.dataUrl){logoData=result.dataUrl;save();render();}
+   }).catch(error=>{
+     if(generation===logoVersion)status('Не удалось обновить логотип: '+(error?.message||'ошибка SVG'),true);
+   });
+   logoSyncPromise=promise;
+   return promise;
+ }
+ function scheduleLogoSync(){
+   clearTimeout(logoSyncTimer);
+   logoSyncTimer=setTimeout(()=>syncSharedLogo(),130);
+ }
+ function moveSharedLogoToContracts(){
+   const editor=$('shared-logo-editor'),slot=$('contracts-logo-slot');
+   if(!editor||!slot)return;
+   slot.append(editor);
+   const step=$('h-logo')?.querySelector('.step');
+   if(step)step.textContent='✓';
+   shared.relayoutLogo();
+   scheduleLogoSync();
+ }
+ const commonLogoStage=$('logo-stage');
+ if(commonLogoStage){
+   new MutationObserver(scheduleLogoSync).observe(commonLogoStage,{
+     subtree:true,childList:true,characterData:true,attributes:true,
+     attributeFilter:['style','fill','stroke','width','height','viewBox','transform']
+   });
+ }
+ document.addEventListener('estratto:navigate',event=>{
+   if(event.detail==='contracts')moveSharedLogoToContracts();
+ });
  function fields(){
    const container=$('contracts-fields');container.replaceChildren();
    const main=[
@@ -209,6 +246,9 @@
    updating=false;
  }
  async function exportPdf(){
+   // Ensure the PDF contains the current colours, component scales and layout.
+   clearTimeout(logoSyncTimer);
+   await syncSharedLogo(true);
    const doc=sectionsFor(selected);
    if(doc.missing.length){
      status('Для формирования PDF заполните: '+doc.missing.join(', '),true);
@@ -316,30 +356,6 @@
    pdf.save(file);
    status('PDF создан: '+file+'. Это неподписанный проект для юридической проверки.');
  }
- async function loadLogo(file){
-   if(!file)return;
-   if(file.size>1500000){status('Логотип не должен превышать 1,5 МБ.',true);return;}
-   const version=++logoVersion;
-   try{
-     if(/\.svg$/i.test(file.name)||file.type==='image/svg+xml'){
-       const svg=shared.sanitizeSvg(await file.text());
-       const png=await shared.rasterizeSvg(svg);
-       if(version!==logoVersion)return;
-       logoData=png.dataUrl;
-     }else if(file.type==='image/png'||file.type==='image/jpeg'){
-       const url=await new Promise((resolve,reject)=>{
-         const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=reject;reader.readAsDataURL(file);
-       });
-       const img=new Image();img.src=url;await img.decode();
-       const canvas=document.createElement('canvas'),scale=Math.min(1,1000/Math.max(img.width,img.height));
-       canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));
-       canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-       if(version!==logoVersion)return;
-       logoData=canvas.toDataURL('image/png');
-     }else throw new Error('Поддерживаются SVG, PNG или JPG.');
-     save();status('Логотип загружен для предварительного просмотра и PDF и сохранён в этом браузере.');render();
-   }catch(e){status('Ошибка загрузки логотипа: '+(e.message||'некорректный файл'),true);}
- }
  core.types.forEach((type,index)=>{
    const button=el('button','contracts-doc-button');button.type='button';button.dataset.contractType=type.id;
    button.append(el('span','contracts-doc-num',String(index+1).padStart(2,'0')));
@@ -349,10 +365,12 @@
  });
  $('contracts-sync').addEventListener('click',()=>syncFromTrade(true));
  $('contracts-export').addEventListener('click',exportPdf);
- $('contracts-logo-file').addEventListener('change',event=>{const file=event.target.files?.[0];event.target.value='';loadLogo(file);});
+
  $('contracts-reset-edits').addEventListener('click',()=>{
    if(!confirm('Сбросить изменения текста выбранного шаблона? Реквизиты компании сохранятся.'))return;
    delete overrides[selected];save();render();status('Текст восстановлен по шаблону.');
  });
  ensureLogo();fields();connectDesignControls();save();render();
+ if($('page-contracts').classList.contains('active'))moveSharedLogoToContracts();
+ else scheduleLogoSync();
 })();
