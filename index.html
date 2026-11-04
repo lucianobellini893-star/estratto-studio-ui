@@ -11,7 +11,7 @@
 <script src="vendor/pdf.min.js"></script>
 <script src="vendor/pdf.worker.min.js"></script>
 <script src="logo-composer.js?v=20261029-account-scope"></script>
-<link rel="stylesheet" href="interface.css?v=20261104-user-signature">
+<link rel="stylesheet" href="interface.css?v=20261104-logo-centered">
 <link rel="stylesheet" href="contracts.css?v=20261104-source1">
 </head>
 <body>
@@ -432,6 +432,10 @@
          <div>
           <label class="file-btn btn small">+ Загрузить SVG-логотип для визитки<input id="mail-signature-logo-file" type="file" accept=".svg,image/svg+xml"></label>
           <button id="mail-signature-logo-remove" type="button" class="btn small">Убрать логотип</button>
+          <label class="f mail-signature-logo-size-label">Размер логотипа в подписи
+            <input type="range" id="mail-signature-logo-size" min="80" max="245" step="5" value="175">
+            <output id="mail-signature-logo-size-value">175 px</output>
+          </label>
           <p class="hint">Логотип отображается справа от данных, как в твоём HTML. Для старого логотипа над письмом остаётся отдельный редактор.</p>
          </div>
         </div>
@@ -1733,8 +1737,8 @@ renderLogoParts();
 <script src="account-numbers.js?v=20261029-account-scope"></script>
 <script src="account.js?v=20261103-auto-import"></script>
 <script src="account-import.js?v=20261103-auto-import"></script>
-<script src="mail-core.js?v=20261104-user-signature"></script>
-<script src="mail.js?v=20261104-user-signature"></script>
+<script src="mail-core.js?v=20261104-logo-centered"></script>
+<script src="mail.js?v=20261104-logo-centered"></script>
 <script src="workspace-core.js?v=20261029-account-scope"></script>
 <script src="workspace.js?v=20261029-account-scope"></script>
 <script src="contracts-expanded.js?v=20261104-expanded1"></script>
