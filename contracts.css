@@ -39,3 +39,29 @@
 #page-contracts .contracts-lock{font-size:11px;color:#727264;line-height:1.7}
 @media(max-width:1050px){#page-contracts .contracts-layout{grid-template-columns:1fr}#page-contracts .contracts-sidebar{display:grid;grid-template-columns:1fr 1fr;gap:15px}#page-contracts .contracts-sidebar>.contracts-panel{min-width:0}}
 @media(max-width:700px){#page-contracts .contracts-sidebar{display:block}#page-contracts .contracts-sidebar>.contracts-panel{margin-bottom:12px}#page-contracts .contracts-panel{padding:14px;border-radius:17px}#page-contracts .contracts-document{padding:22px 17px}#page-contracts .contracts-preview-stage{padding:9px}#page-contracts .contracts-field-grid{grid-template-columns:1fr}}
+
+/* Editorial legal document styling inspired by the supplied PDF reference. */
+#page-contracts .contracts-style-panel{border:1px solid #e7e7df;background:#fafaf8;border-radius:15px;padding:14px;margin:12px 0}
+#page-contracts .contracts-colors{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+#page-contracts .contracts-colors .contracts-field{margin:0}
+#page-contracts .contracts-colors input[type=color]{appearance:none;width:100%;height:40px;border:1px solid #e0e0d6;padding:4px;border-radius:11px;background:#fff;cursor:pointer}
+#page-contracts .contracts-document{border:0;border-radius:2px;padding:55px 63px 62px;background:#fff;color:#131313;font-family:Inter,Arial,Helvetica,sans-serif}
+#page-contracts .contracts-document h1{font-size:24px;font-weight:700;letter-spacing:-.65px;line-height:1.27;color:#111;margin:24px 0 12px}
+#page-contracts .contracts-document h2{font-size:14px;font-weight:700;line-height:1.4;letter-spacing:-.1px;margin:22px 0 9px;color:#181818}
+#page-contracts .contracts-document h2.contracts-intro-title{font-size:16px;color:var(--contract-secondary,#CD1935);margin:22px 0 13px}
+#page-contracts .contracts-document h2.contracts-section-blue{font-size:15px;color:var(--contract-primary,#085F94);margin:25px 0 13px}
+#page-contracts .contracts-document h2.contracts-section-heading{font-size:13px;color:#151515;margin:22px 0 9px}
+#page-contracts .contracts-document .contracts-important{margin:20px 0 22px}
+#page-contracts .contracts-document .contracts-important h2{font-size:16px;color:var(--contract-primary,#085F94);margin:0 0 12px}
+#page-contracts .contracts-document .contracts-important ul{padding-left:26px;font-size:11.7px;line-height:1.75;margin:8px 0 0}
+#page-contracts .contracts-document .contracts-important li{padding-left:2px}
+#page-contracts .contracts-document p{font-size:11.7px;line-height:1.7;color:#1b1b1b;margin:10px 0 12px}
+#page-contracts .contracts-document .contracts-meta{color:#555;font-size:10px}
+#page-contracts .contracts-document .contracts-topline{height:0;background:transparent}
+#page-contracts .contracts-document .contracts-preview-logo{max-height:51px;max-width:205px;object-position:left center}
+#page-contracts .contracts-document .contracts-parties{background:#f6f6f6;border:1px solid #e5e5e5;border-radius:0;padding:13px 15px}
+#page-contracts .contracts-document .contracts-draft-note{color:#626262;background:#fafafa;border:1px solid #e4e4e4;border-radius:0;padding:10px 12px;font-size:10px}
+#page-contracts .contracts-document .contracts-footer{color:#777;border-color:#d7d7d7}
+#page-contracts #contracts-clauses{margin-top:22px}
+#page-contracts .contracts-clause{border:1px solid #e9e9e2;border-radius:11px;margin:8px 0;padding:6px 14px}
+@media(max-width:700px){#page-contracts .contracts-document{padding:28px 21px}#page-contracts .contracts-colors{grid-template-columns:1fr 1fr}}
