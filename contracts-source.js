@@ -236,7 +236,11 @@
   doc.old={};
   for(const inp of $('contracts-source-rules').querySelectorAll('[data-source-old]'))doc.old[inp.dataset.sourceOld]=inp.value;
   pagesPreview(doc);
-  if(!total){status('Совпадений в редактируемом тексте не найдено. Проверь старые названия: они могут отличаться по написанию.',true);return;}
+  if(!total){
+   if(doc.lastAppliedCount){status('Новых замен нет: '+doc.lastAppliedCount+' упоминаний уже изменены при предыдущем применении. Можно скачивать рабочую PDF-версию.');return;}
+   status('Совпадений не найдено. Проверь названия в таблице и активные галочки. Если текст разбит или написан иначе, выбери отдельное сокращение IBUK / IBLLC / IBKR.',true);return;
+  }
+  doc.lastAppliedCount=(doc.lastAppliedCount||0)+total;
   status('Заменено '+total+' упоминаний на '+doc.edited.length+' страницах. Изменения включены в PDF с ручными правками текста. PDF с исходным дизайном выполняет отдельную замену на самих страницах.');
  }
  async function parseFile(file){
