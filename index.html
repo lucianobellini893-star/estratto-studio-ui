@@ -11,7 +11,7 @@
 <script src="vendor/pdf.min.js"></script>
 <script src="vendor/pdf.worker.min.js"></script>
 <script src="logo-composer.js?v=20261029-account-scope"></script>
-<link rel="stylesheet" href="interface.css?v=20261029-account-scope">
+<link rel="stylesheet" href="interface.css?v=20261104-signature-card">
 <link rel="stylesheet" href="contracts.css?v=20261104-source1">
 </head>
 <body>
@@ -416,10 +416,37 @@
       </section>
       <section class="card" aria-labelledby="mail-footer-heading">
        <h2 id="mail-footer-heading">Подпись под письмом</h2>
-       <label class="mail-footer-toggle"><input type="checkbox" id="mail-footer-enabled"> Показывать подпись на сером фоне</label>
-       <label class="f">Небольшой текст<input id="mail-footer-label" type="text" maxlength="100" placeholder="Powered by"></label>
-       <label class="f">Название компании<input id="mail-footer-company" type="text" maxlength="100" placeholder="Название компании"></label>
-       <p class="hint">По центру под белой карточкой: небольшой серый текст и более выразительное название компании, как на примере.</p>
+       <label class="mail-footer-toggle"><input type="checkbox" id="mail-footer-enabled"> Добавить подпись в конце письма</label>
+       <label class="f">Вид подписи<select id="mail-footer-style"><option value="card">Чёрная визитка с закруглёнными углами</option><option value="simple">Простая текстовая подпись</option></select></label>
+       <div id="mail-footer-card-fields" class="mail-footer-card-fields">
+        <div class="mail-signature-photo">
+         <div class="mail-signature-photo-preview" id="mail-signature-photo-preview" aria-label="Фотография в подписи">Фото</div>
+         <div class="mail-signature-photo-actions">
+          <label class="file-btn btn small">Загрузить фото<input type="file" id="mail-signature-photo-file" accept="image/jpeg,image/png,image/webp" aria-label="Загрузить фотографию для подписи"></label>
+          <button type="button" class="btn small" id="mail-signature-photo-remove">Убрать фото</button>
+          <p class="hint">JPG, PNG или WebP до 8 МБ. Фото автоматически обрезается по центру в круг и включается в HTML и EML письма.</p>
+         </div>
+        </div>
+        <label class="f">Имя и фамилия<input id="mail-signature-name" type="text" maxlength="100" placeholder="Daniel Martone" autocomplete="name"></label>
+        <label class="f">Должность<input id="mail-signature-role" type="text" maxlength="130" placeholder="Broker e Consulente Finanziario"></label>
+        <label class="f">Название компании<input id="mail-footer-company-card" type="text" maxlength="100" placeholder="Название компании"></label>
+        <div class="mail-signature-fields-grid">
+         <label class="f">Телефон<input id="mail-signature-phone" type="tel" maxlength="60" placeholder="+39 351 234 5678"></label>
+         <label class="f">Email<input id="mail-signature-email" type="email" maxlength="130" placeholder="name@company.com"></label>
+        </div>
+        <label class="f">Город / адрес<input id="mail-signature-address" type="text" maxlength="200" placeholder="Milano, Italia"></label>
+        <details><summary>Ссылки на соцсети</summary>
+         <label class="f">LinkedIn (HTTPS)<input id="mail-signature-linkedin" type="url" placeholder="https://linkedin.com/in/..." autocomplete="off"></label>
+         <label class="f">WhatsApp (HTTPS)<input id="mail-signature-whatsapp" type="url" placeholder="https://wa.me/..." autocomplete="off"></label>
+         <label class="f">Telegram (HTTPS)<input id="mail-signature-telegram" type="url" placeholder="https://t.me/..." autocomplete="off"></label>
+         <label class="f">Instagram (HTTPS)<input id="mail-signature-instagram" type="url" placeholder="https://instagram.com/..." autocomplete="off"></label>
+        </details>
+       </div>
+       <div id="mail-footer-simple-fields" hidden>
+        <label class="f">Небольшой текст<input id="mail-footer-label" type="text" maxlength="100" placeholder="Powered by"></label>
+        <label class="f">Название компании<input id="mail-footer-company" type="text" maxlength="100" placeholder="Название компании"></label>
+       </div>
+       <p class="hint">Чёрная карточка в конце письма: скруглённые углы, круглая фотография в золотой рамке, контакты и название компании. Изменения сразу видны в предпросмотре.</p>
       </section>
       <section class="card" aria-labelledby="mail-export-heading">
        <h2 id="mail-export-heading">Готовое письмо</h2>
@@ -1698,8 +1725,8 @@ renderLogoParts();
 <script src="account-numbers.js?v=20261029-account-scope"></script>
 <script src="account.js?v=20261103-auto-import"></script>
 <script src="account-import.js?v=20261103-auto-import"></script>
-<script src="mail-core.js?v=20261029-account-scope"></script>
-<script src="mail.js?v=20261103-logo-click-editor"></script>
+<script src="mail-core.js?v=20261104-signature-card"></script>
+<script src="mail.js?v=20261104-signature-card"></script>
 <script src="workspace-core.js?v=20261029-account-scope"></script>
 <script src="workspace.js?v=20261029-account-scope"></script>
 <script src="contracts-expanded.js?v=20261104-expanded1"></script>
