@@ -2,8 +2,8 @@
    Templates are original drafts, NOT Interactive Brokers agreements and NOT legal advice.
    No acceptance, regulatory permission, or signature is inferred by this module. */
 (function(root,factory){
-  const api=factory(typeof module==='object'&&module.exports?require('./contracts-expanded.js'):root.EstrattoContractsExpanded);if(typeof module==='object'&&module.exports)module.exports=api;else root.EstrattoContractsCore=api;
-})(typeof globalThis!=='undefined'?globalThis:this,function(expanded){
+  const api=factory(typeof module==='object'&&module.exports?require('./contracts-expanded.js'):root.EstrattoContractsExpanded,typeof module==='object'&&module.exports?require('./contracts-clauses.js'):root.EstrattoContractsClauses);if(typeof module==='object'&&module.exports)module.exports=api;else root.EstrattoContractsCore=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(expanded,clauses){
   'use strict';
   const versions={agreement:'draft-1.0',application:'draft-1.0',risk:'draft-1.0',consent:'draft-1.0'};
   const types=[
@@ -238,7 +238,7 @@
     if(!Object.prototype.hasOwnProperty.call(builders,type))throw new Error('Tipo documento non riconosciuto.');
     const c=common(profile);
     return {id:type,version:versions[type],title:types.find(item=>item.id===type).title,englishTitle:types.find(item=>item.id===type).en,
-      sections:type==='agreement'&&expanded?expanded.build(profile):builders[type](c),missing:checkRequired(profile),draft:true};
+      sections:type==='agreement'&&expanded?(clauses?clauses.extend(expanded.build(profile)):expanded.build(profile)):builders[type](c),missing:checkRequired(profile),draft:true};
   }
   return {types,versions,build,checkRequired};
 });
