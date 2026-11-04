@@ -81,3 +81,7 @@
 #page-contracts #contracts-logo-slot #logo-stage { min-height: 118px; background: #fff; }
 #page-contracts #contracts-logo-slot #logo-tools,
 #page-contracts #contracts-logo-slot #logo-composition { min-width: 0; }
+
+#page-contracts .contracts-bulk-replace{border:1px solid #e6e6dd;background:#f8f8f4;border-radius:14px;padding:14px;margin:17px 0}
+#page-contracts .contracts-bulk-replace .hint{margin:9px 0;font-size:11px}
+#page-contracts .contracts-bulk-replace .btn{margin-top:7px}
