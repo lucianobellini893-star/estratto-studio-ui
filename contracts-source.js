@@ -308,7 +308,9 @@
    const missing=rules.filter(rule=>!result.coverage[rule.key]).map(rule=>rule.old);
    let note='PDF с исходным дизайном создан: '+result.pages+' стр.; замен найдено: '+matches+'.';
    if(missing.length)note+=' Не найдены: '+missing.join('; ')+'.';
-   if(result.compressed)note+=' На '+result.compressed+' участках новое значение уменьшено для размещения в старой строке.';
+   if(result.compressed)note+=' На '+result.compressed+' строках размер текста уменьшен для соблюдения границ.';
+   if(result.repairedLines!==undefined)note+=' Полностью перерисовано строк: '+result.repairedLines+'.';
+   if(result.skipped)note+=' Не удалось точно обработать '+result.skipped+' замен — проверь эти страницы.';
 
    note+=' Проверь все страницы перед передачей юристу.';
    status(note,missing.length>0);
@@ -365,6 +367,11 @@
   const doc=current();if(doc){doc.old.companyName=$('contracts-source-company-old').value;const field=document.querySelector('[data-source-old="companyName"]');if(field)field.value=doc.old.companyName;}
   status(doc?.old.companyName?'Старое название выбрано: '+doc.old.companyName+'. Нажми «Применить ко всем страницам».':'Выбери старое название из PDF.');
  });
+ // Export from the common top toolbar uses the imported source as well.
+ window.EstrattoSourcePdf={
+   hasCurrent:()=>!!docs[currentType()],
+   exportCurrent:()=>{active=currentType();return exportPreservingLayout();}
+ };
  input.addEventListener('change',event=>{const f=event.target.files?.[0];event.target.value='';parseFile(f);});
  $('contracts-source-apply').addEventListener('click',applyReplacement);
  $('contracts-source-export').addEventListener('click',exportPreservingLayout);
