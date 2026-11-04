@@ -307,6 +307,14 @@
               <p class="hint">Редакция нужна для учёта версий, но сама по себе не доказывает согласие клиента.</p>
             </div>
             <div id="contracts-fields" style="margin-top:14px"></div>
+            <div class="contracts-bulk-replace">
+              <div class="contracts-label">БЫСТРАЯ ЗАМЕНА НАЗВАНИЯ В ТЕКСТЕ</div>
+              <p class="hint">Если в ранее отредактированных пунктах осталось старое название, введи его здесь. Во всех твоих правках оно будет связано с полем «Название компании» и при следующей смене обновится автоматически. Юридические названия других участников, регуляторы и лицензии не заменяются автоматически.</p>
+              <label class="contracts-field">Старое название, которое требуется заменить
+                <input type="text" id="contracts-old-company-name" placeholder="Например: прежнее название брокера" autocomplete="off">
+              </label>
+              <button type="button" id="contracts-bulk-replace" class="btn small">Заменить во всех отредактированных пунктах</button>
+            </div>
             <div class="contracts-rule"></div>
             <p class="hint">Это тот же редактор SVG, что в «Выписках»: кликните по тексту или символу, выберите цвет, настройте масштаб частей и их расположение. Логотип один для всех документов компании.</p>
             <div id="contracts-logo-slot"></div>
@@ -1657,6 +1665,6 @@ renderLogoParts();
 <script src="contracts-expanded.js?v=20261104-expanded1"></script>
 <script src="contracts-clauses.js?v=20261104-longform1"></script>
 <script src="contracts-core.js?v=20261104-longform1"></script>
-<script src="contracts.js?v=20261104-longform1"></script>
+<script src="contracts.js?v=20261104-autofill2"></script>
 </body>
 </html>
