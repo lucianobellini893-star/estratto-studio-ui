@@ -3,7 +3,7 @@
   'use strict';
   const core=window.EstrattoMail,shared=window.EstrattoDocument,$=id=>document.getElementById(id),key='estratto-mail.v1';
   let saved={};try{saved=JSON.parse(localStorage.getItem(key)||'{}')||{};}catch(_){}
-  const state={title:'',text:'',logoUrl:'',logoHeight:32,layout:'horizontal',parts:[],footerEnabled:false,footerLabel:'Powered by',footerCompany:'',...saved,logoData:''};
+  const state={title:'',text:'',logoUrl:'',logoHeight:32,layout:'horizontal',parts:[],footerEnabled:false,footerStyle:'card',footerLabel:'Powered by',footerCompany:'',signatureName:'',signatureRole:'',signaturePhone:'',signatureEmail:'',signatureAddress:'',signatureLinkedin:'',signatureWhatsapp:'',signatureTelegram:'',signatureInstagram:'',signaturePhoto:'',...saved,logoData:''};
   if(!Array.isArray(state.parts))state.parts=[];
   state.parts=state.parts.slice(0,4);let sequence=0,busy=false,timer;
   const options={fontBase:new URL('fonts/',location.href).href};
@@ -90,6 +90,18 @@
     catch(_){message('mail-export-message','Не удалось сохранить черновик в браузере. Скачайте HTML, чтобы сохранить письмо.',true);}
   }
   function refresh(){
+    const card=state.footerStyle==='card';
+    $('mail-footer-card-fields').hidden=!card;
+    $('mail-footer-simple-fields').hidden=card;
+    const photoPreview=$('mail-signature-photo-preview');
+    photoPreview.replaceChildren();
+    if(state.signaturePhoto){
+      const image=document.createElement('img');
+      image.src=state.signaturePhoto;image.alt='Фото для подписи';
+      image.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;';
+      photoPreview.append(image);
+    }else photoPreview.textContent='Фото';
+    $('mail-signature-photo-remove').disabled=!state.signaturePhoto;
     $('mail-frame').srcdoc=core.build(state,{...options,preview:true,placeholder:true}).html;
     $('mail-code').value=core.build(state,options).html;
     $('mail-logo-size-value').textContent=state.logoHeight+' px';
@@ -237,6 +249,78 @@
   $('mail-text-color').addEventListener('input',event=>format('foreColor',event.target.value));
   $('mail-footer-enabled').checked=Boolean(state.footerEnabled);
   $('mail-footer-enabled').addEventListener('change',()=>{state.footerEnabled=$('mail-footer-enabled').checked;persist();refresh();});
+
+  // A single footerCompany value powers both signature styles.
+  const sigFields=[
+    ['mail-signature-name','signatureName'],
+    ['mail-signature-role','signatureRole'],
+    ['mail-signature-phone','signaturePhone'],
+    ['mail-signature-email','signatureEmail'],
+    ['mail-signature-address','signatureAddress'],
+    ['mail-signature-linkedin','signatureLinkedin'],
+    ['mail-signature-whatsapp','signatureWhatsapp'],
+    ['mail-signature-telegram','signatureTelegram'],
+    ['mail-signature-instagram','signatureInstagram'],
+    ['mail-footer-company-card','footerCompany']
+  ];
+  for(const [id,key] of sigFields){
+    const el=$(id);
+    el.value=state[key]||'';
+    el.addEventListener('input',()=>{
+      state[key]=el.value;
+      if(key==='footerCompany')$('mail-footer-company').value=el.value;
+      clearTimeout(timer);timer=setTimeout(()=>{persist();refresh();},130);
+    });
+  }
+  $('mail-footer-company').addEventListener('input',()=>{
+    $('mail-footer-company-card').value=$('mail-footer-company').value;
+  });
+  $('mail-footer-style').value=state.footerStyle==='simple'?'simple':'card';
+  state.footerStyle=$('mail-footer-style').value;
+  $('mail-footer-style').addEventListener('change',()=>{
+    state.footerStyle=$('mail-footer-style').value;
+    persist();refresh();
+  });
+  async function loadSignaturePhoto(file){
+    if(!file)return;
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type)){
+      message('mail-export-message','Для фотографии используйте JPG, PNG или WebP.',true);return;
+    }
+    if(file.size>8*1024*1024){
+      message('mail-export-message','Фотография должна быть меньше 8 МБ.',true);return;
+    }
+    const objectUrl=URL.createObjectURL(file);
+    try{
+      const image=await new Promise((resolve,reject)=>{
+        const img=new Image();
+        img.onload=()=>resolve(img);
+        img.onerror=()=>reject(new Error('Фотографию не удалось открыть.'));
+        img.src=objectUrl;
+      });
+      const canvas=document.createElement('canvas');
+      canvas.width=256;canvas.height=256;
+      const ctx=canvas.getContext('2d');
+      if(!ctx)throw new Error('Браузер не поддерживает обработку фотографии.');
+      const length=Math.min(image.naturalWidth,image.naturalHeight);
+      const sx=(image.naturalWidth-length)/2,sy=(image.naturalHeight-length)/2;
+      ctx.fillStyle='#ffffff';ctx.fillRect(0,0,256,256);
+      ctx.drawImage(image,sx,sy,length,length,0,0,256,256);
+      state.signaturePhoto=canvas.toDataURL('image/jpeg',.82);
+      persist();refresh();
+      message('mail-export-message','Фотография добавлена в подпись.');
+    }catch(error){
+      message('mail-export-message',error.message||'Не удалось обработать фото.',true);
+    }finally{URL.revokeObjectURL(objectUrl);}
+  }
+  $('mail-signature-photo-file').addEventListener('change',event=>{
+    const file=event.target.files?.[0];event.target.value='';
+    loadSignaturePhoto(file);
+  });
+  $('mail-signature-photo-remove').addEventListener('click',()=>{
+    state.signaturePhoto='';persist();refresh();
+    message('mail-export-message','Фотография удалена из подписи.');
+  });
+
   $('mail-logo-file').addEventListener('change',event=>upload(event.target,false));
   $('mail-logo-add').addEventListener('change',event=>upload(event.target,true));
   $('mail-logo-remove').addEventListener('click',()=>{state.parts=[];partsUI();renderLogo();});
