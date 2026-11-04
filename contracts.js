@@ -198,62 +198,111 @@
  }
  async function exportPdf(){
    const doc=sectionsFor(selected);
-   const missing=doc.missing;
-   if(missing.length){status('Completa prima i dati obbligatori: '+missing.join(', '),true);return;}
-   const jsPDF=window.jspdf?.jsPDF;
-   if(!jsPDF){status('Il motore PDF non è disponibile.',true);return;}
-   const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+   if(doc.missing.length){
+     status('Для формирования PDF заполните: '+doc.missing.join(', '),true);
+     return;
+   }
+   const JsPDF=window.jspdf?.jsPDF;
+   if(!JsPDF){status('Библиотека PDF недоступна.',true);return;}
+   const pdf=new JsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
    try{
      for(const [family,file] of [['InterR','Inter-Regular.ttf'],['InterSB','Inter-SemiBold.ttf']]){
        const response=await fetch('fonts/'+file);
-       if(!response.ok)throw new Error('Font '+file+' non disponibile');
+       if(!response.ok)throw new Error('Не удалось загрузить шрифт '+file);
        const bytes=new Uint8Array(await response.arrayBuffer());
-       let binary='';for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
+       let binary='';
+       for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
        pdf.addFileToVFS(file,btoa(binary));
        pdf.addFont(file,family,'normal');
      }
-   }catch(e){status('Не удалось загрузить шрифты для PDF: '+e.message,true);return;}
-   const margin=19,pageW=210,pageH=297,width=pageW-margin*2;
-   let y=25,pageNo=1;
-   const addPage=()=>{pdf.addPage();pageNo++;y=25};
-   function ensure(height){if(y+height>pageH-24)addPage();}
-   function text(value,{size=10,bold=false,gap=5,line=5.2,color=[40,40,40]}={}){
-     pdf.setFont(bold?'InterSB':'InterR','normal');
-     pdf.setFontSize(size);pdf.setTextColor(...color);
-     const wraps=pdf.splitTextToSize(String(value||''),width);
-     for(const row of wraps){
-       ensure(line);
-       pdf.text(row,margin,y);
-       y+=line;
-     }
-     y+=gap;
+   }catch(e){status('Не удалось встроить шрифты: '+e.message,true);return;}
+   const brand=getBrand(),blue=hexToRgb(brand.primary),red=hexToRgb(brand.secondary),black=[20,20,20],gray=[101,101,101];
+   const left=24,right=24,width=210-left-right,bottom=276;
+   let y=25;
+   function nextPage(){pdf.addPage();y=27;}
+   function fit(needed){if(y+needed>bottom)nextPage();}
+   function write(value,opts={}){
+     const font=opts.bold?'InterSB':'InterR',size=opts.size||10.5,line=opts.line||5.2,spacing=opts.after===undefined?4:opts.after;
+     pdf.setFont(font,'normal');pdf.setFontSize(size);pdf.setTextColor(...(opts.color||black));
+     const rows=pdf.splitTextToSize(String(value||''),opts.width||width);
+     for(const row of rows){fit(line);pdf.text(row,left,y);y+=line;}
+     y+=spacing;
    }
-   pdf.setDrawColor(160,160,155);
+   function sectionHeading(title,color=blue,first=false){
+     const split=pdf.splitTextToSize(title,width);
+     fit(split.length*7+8);
+     y+=first?4:5;
+     pdf.setFont('InterSB','normal');pdf.setFontSize(12.5);pdf.setTextColor(...color);
+     split.forEach(row=>{pdf.text(row,left,y);y+=6.6;});
+     y+=5;
+   }
+   // Reference-led editorial structure: white pages, logo and black title,
+   // red introductory heading, blue navigation headings; no IBKR branding.
+   const displayTitle=selected==='agreement'?'Client Agreement':doc.englishTitle;
+   pdf.setFont('InterR','normal');pdf.setFontSize(9.5);pdf.setTextColor(...black);
+   pdf.text((profile.versionLabel||doc.version)+' | '+(profile.issueDate||''),210-right,19,{align:'right'});
    if(logoData&&logoData.startsWith('data:image/png')){
-     try{pdf.addImage(logoData,'PNG',margin,y,40,15,undefined,'FAST');y+=19}catch(_){}
+     try{
+       const imgInfo=pdf.getImageProperties(logoData);
+       let w=55,h=w*imgInfo.height/imgInfo.width;
+       if(h>19){h=19;w=h*imgInfo.width/imgInfo.height;}
+       pdf.addImage(logoData,'PNG',left,17,w,h,undefined,'FAST');y=Math.max(y,17+h+12);
+     }catch(_){write(profile.companyName,{size:16,bold:true,after:5});}
+   }else write(profile.companyName,{size:16,bold:true,after:5});
+   fit(20);
+   write(displayTitle,{size:19,bold:true,line:9,after:7});
+   sectionHeading(selected==='agreement'?'About these Terms':'About this document',red,true);
+   if(selected==='agreement'){
+     write('This independent agreement draft describes the proposed rights and responsibilities of '+profile.companyName+' and the client named in the document. The legal provisions require review before use. Contact: '+profile.companyEmail+'.',{size:10.5,line:5.6,after:5});
+     sectionHeading('ⓘ Important documents'.replace('ⓘ ','') ,blue,true);
+     write('The complete agreement package may include the following separately approved documents:',{size:10.2,after:3});
+     for(const item of ['Client Agreement (these Terms)','Account Opening Application','General Risk Disclosure','Express Consent / Electronic Acceptance','Costs and Charges; Privacy Policy; other applicable disclosures']){
+       write('  •  '+item,{size:9.8,line:5.1,after:0});
+     }
+     y+=6;
+     sectionHeading('Our legal relationship',blue,true);
+     write('About us',{size:10.5,bold:true,after:4});
+     write(profile.companyName+' is registered in '+profile.companyCountry+' under registration number '+profile.companyRegistration+'. Registered office: '+profile.companyAddress+'.',{size:10.2,line:5.5,after:5});
+     write('The company contact address is '+profile.companyEmail+'. Any regulatory status or permission must be confirmed separately in the official registers before offering regulated services.',{size:10.2,line:5.5,after:5});
+     write('Services and products',{size:10.5,bold:true,after:4});
+     write('Services indicated in this draft: '+(profile.services||'[to be defined]')+'. Products indicated: '+(profile.products||'[to be defined]')+'.',{size:10.2,line:5.5,after:6});
+     sectionHeading('Detailed contractual provisions',blue);
+   }else{
+     write('Prepared for '+profile.companyName+'. This is an independent working draft, not an executed or verified customer agreement.',{size:10.5,after:5});
+     sectionHeading('Document information',blue);
    }
-   text(profile.companyName,{bold:true,size:11,gap:3});
-   text(profile.companyAddress,{size:8,gap:5,color:[106,106,99]});
-   pdf.line(margin,y,pageW-margin,y);y+=9;
-   text(doc.title,{size:17,bold:true,line:7,gap:5});
-   text(doc.englishTitle+' · '+doc.version+' · '+profile.issueDate,{size:9,color:[105,105,99],gap:7});
-   text('Societa: '+profile.companyName+' | Cliente: '+profile.clientName+' | ID: '+profile.clientId,{size:9,gap:8});
-   text('BOZZA NON FIRMATA - Documento non approvato e non sottoscritto. Necessaria revisione legale.',{size:9,bold:true,color:[145,72,32],gap:8});
+   const info=[['Company',profile.companyName],['Client',profile.clientName],['Client ID',profile.clientId],['Account',profile.accountId||'Not yet assigned'],['Registered address',profile.companyAddress],['Document version',profile.versionLabel||doc.version]];
+   // Compact document metadata table.
+   function tableRow(label,value){
+     const a=pdf.splitTextToSize(String(label),43),b=pdf.splitTextToSize(String(value),width-51);
+     const height=Math.max(a.length,b.length)*5.1+4;
+     fit(height);
+     pdf.setFillColor(246,247,248);pdf.rect(left,y-4,47,height,'F');
+     pdf.setDrawColor(222,224,225);pdf.line(left,y+height-4,left+width,y+height-4);
+     pdf.setFont('InterSB','normal');pdf.setFontSize(8.6);pdf.setTextColor(...gray);
+     a.forEach((line,index)=>pdf.text(line,left+3,y+index*5.1));
+     pdf.setFont('InterR','normal');pdf.setFontSize(8.6);pdf.setTextColor(...black);
+     b.forEach((line,index)=>pdf.text(line,left+51,y+index*5.1));
+     y+=height;
+   }
+   info.forEach(([label,value])=>tableRow(label,value));
+   y+=8;
    for(const section of doc.sections){
-     ensure(16);text(section.title,{size:11,bold:true,gap:3,line:6});
-     for(const paragraph of section.paragraphs)text(paragraph,{size:9.5,gap:5,line:5.15});
-     y+=2;
+     sectionHeading(section.title);
+     for(const paragraph of section.paragraphs)write(paragraph,{size:9.6,line:5.25,after:5});
    }
+   sectionHeading('Record of acceptance',blue);
+   write('NOT EXECUTED. This document is a draft only. No signature, consent, onboarding approval, timestamp, or regulatory permission is certified by this export.',{size:9.6,bold:true,after:8});
    const total=pdf.getNumberOfPages();
    for(let p=1;p<=total;p++){
-     pdf.setPage(p);pdf.setFont('InterR','normal');pdf.setFontSize(8);pdf.setTextColor(125,125,120);
-     pdf.line(margin,282,pageW-margin,282);
-     pdf.text('BOZZA NON FIRMATA - '+doc.version,margin,288);
-     pdf.text(p+' / '+total,pageW-margin,288,{align:'right'});
+     pdf.setPage(p);pdf.setDrawColor(214,214,211);pdf.line(left,282,210-right,282);
+     pdf.setFont('InterR','normal');pdf.setFontSize(8.3);pdf.setTextColor(...gray);
+     pdf.text('WORKING DRAFT - NOT SIGNED | '+(profile.versionLabel||doc.version),left,288);
+     pdf.text(p+' / '+total,210-right,288,{align:'right'});
    }
-   const filename='draft_'+doc.id+'_'+String(profile.clientId||'client').replace(/[^a-zA-Z0-9_-]/g,'_')+'.pdf';
-   pdf.save(filename);
-   status('Scaricato: '+filename+'. È una bozza non firmata; richiede verifica legale.');
+   const file='client_agreement_draft_'+doc.id+'_'+String(profile.clientId||'client').replace(/[^a-z0-9_-]/gi,'_')+'.pdf';
+   pdf.save(file);
+   status('PDF создан: '+file+'. Это неподписанный проект для юридической проверки.');
  }
  async function loadLogo(file){
    if(!file)return;
