@@ -168,19 +168,29 @@
    page.append(el('div','contracts-footer','Documento non firmato · '+doc.version));
    updating=false;
  }
- function exportPdf(){
+ async function exportPdf(){
    const doc=sectionsFor(selected);
    const missing=doc.missing;
    if(missing.length){status('Completa prima i dati obbligatori: '+missing.join(', '),true);return;}
    const jsPDF=window.jspdf?.jsPDF;
    if(!jsPDF){status('Il motore PDF non è disponibile.',true);return;}
    const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+   try{
+     for(const [family,file] of [['InterR','Inter-Regular.ttf'],['InterSB','Inter-SemiBold.ttf']]){
+       const response=await fetch('fonts/'+file);
+       if(!response.ok)throw new Error('Font '+file+' non disponibile');
+       const bytes=new Uint8Array(await response.arrayBuffer());
+       let binary='';for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
+       pdf.addFileToVFS(file,btoa(binary));
+       pdf.addFont(file,family,'normal');
+     }
+   }catch(e){status('Не удалось загрузить шрифты для PDF: '+e.message,true);return;}
    const margin=19,pageW=210,pageH=297,width=pageW-margin*2;
    let y=25,pageNo=1;
    const addPage=()=>{pdf.addPage();pageNo++;y=25};
    function ensure(height){if(y+height>pageH-24)addPage();}
    function text(value,{size=10,bold=false,gap=5,line=5.2,color=[40,40,40]}={}){
-     pdf.setFont('helvetica',bold?'bold':'normal');
+     pdf.setFont(bold?'InterSB':'InterR','normal');
      pdf.setFontSize(size);pdf.setTextColor(...color);
      const wraps=pdf.splitTextToSize(String(value||''),width);
      for(const row of wraps){
@@ -208,7 +218,7 @@
    }
    const total=pdf.getNumberOfPages();
    for(let p=1;p<=total;p++){
-     pdf.setPage(p);pdf.setFont('helvetica','normal');pdf.setFontSize(8);pdf.setTextColor(125,125,120);
+     pdf.setPage(p);pdf.setFont('InterR','normal');pdf.setFontSize(8);pdf.setTextColor(125,125,120);
      pdf.line(margin,282,pageW-margin,282);
      pdf.text('BOZZA NON FIRMATA - '+doc.version,margin,288);
      pdf.text(p+' / '+total,pageW-margin,288,{align:'right'});
