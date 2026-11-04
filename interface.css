@@ -640,3 +640,10 @@ select:focus-visible { outline:2px solid #72756b; outline-offset:3px; }
 #page-mail .mail-signature-fields-grid .f{min-width:0;}
 #page-mail .mail-footer-card-fields details{border-top:1px solid var(--line);padding-top:10px;}
 @media(max-width:670px){#page-mail .mail-signature-fields-grid{grid-template-columns:1fr;}#page-mail .mail-signature-photo{align-items:flex-start;}}
+
+/* Uploaded SVG for user's exact right-hand signature panel. */
+#page-mail .mail-signature-logo {display:flex;gap:16px;align-items:center;margin:12px 0 18px;padding:14px;background:#f8f7f3;border:1px solid var(--line);border-radius:15px;}
+#page-mail .mail-signature-logo-preview {width:125px;height:75px;min-width:125px;display:flex;align-items:center;justify-content:center;background:#050505;color:#b7b7b7;border:1px dashed #646464;border-radius:12px;padding:8px;font-size:11px;text-align:center;overflow:hidden;}
+#page-mail .mail-signature-logo > div:last-child {display:flex;gap:9px;align-items:center;flex-wrap:wrap;min-width:0;}
+#page-mail .mail-signature-logo .hint{width:100%;margin:2px 0 0;}
+@media(max-width:560px){#page-mail .mail-signature-logo{flex-wrap:wrap;}}
