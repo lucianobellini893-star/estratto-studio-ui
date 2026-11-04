@@ -92,7 +92,7 @@
     const size=dimensions(state);
     const title=String(state.title||'').trim();
     const body=paragraphs(state.text,state.runs)||(options.placeholder?`<p style="margin:0;font-family:${font};font-size:16px;line-height:26px;color:#999990;">Введите или вставьте текст — здесь появится оформленное письмо.</p>`:'');
-    const logo=image?`<tr><td align="left" style="padding:0 0 24px;text-align:left;"><img src="${escape(image)}" alt="${escape(state.logoAlt||'Logo')}" width="${size.width}" height="${size.height}" style="display:block;width:${size.width}px;height:${size.height}px;max-width:100%;border:0;outline:none;text-decoration:none;"></td></tr>`:'';
+    const logo=image?`<tr><td align="center" style="padding:0 0 24px;text-align:center;"><img src="${escape(image)}" alt="${escape(state.logoAlt||'Logo')}" width="${size.width}" height="${size.height}" style="display:block;width:${size.width}px;height:${size.height}px;max-width:100%;margin:0 auto;border:0;outline:none;text-decoration:none;"></td></tr>`:'';
     const heading=title?`<h1 style="margin:0 0 20px;font-family:${font};font-size:21px;line-height:30px;font-weight:600;color:#202020;">${escape(title)}</h1>`:'';
     const footer=signature(state,options);
     const signatureWidth=state.footerEnabled&&state.footerStyle==='card'?760:560;
