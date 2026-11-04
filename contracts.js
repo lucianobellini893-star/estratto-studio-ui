@@ -41,39 +41,41 @@
  }
  function fields(){
    const container=$('contracts-fields');container.replaceChildren();
-   const groups=[
-     {title:'Компания',rows:[
-       ['companyName','Название компании'],['companyAddress','Юридический адрес','textarea'],
-       ['companyCountry','Страна регистрации'],['companyRegistration','Регистрационный номер'],
-       ['companyEmail','Email компании'],['companyWebsite','Сайт'],
-       ['regulator','Регулятор (только если подтверждён)'],['authorization','Номер лицензии (только если есть)'],
-       ['governingLaw','Применимое право'],['jurisdiction','Компетентный суд / орган'],
-       ['complaintsEmail','Email для жалоб'],['protectionScheme','Схема защиты инвесторов (если действует)'],
-       ['services','Фактически доступные услуги','textarea'],['products','Доступные продукты','textarea'],
-       ['feeSchedule','Ссылка или версия тарифов'],['signatureMethod','Реальный способ подтверждения']
-     ]},
-     {title:'Клиент и документ',rows:[
-       ['clientName','Имя и фамилия клиента'],['clientId','ID клиента'],
-       ['accountId','Номер счёта (если присвоен)'],['clientCountry','Страна проживания'],
-       ['issueDate','Дата составления','date']
-     ]}
+   const main=[
+     ['companyName','Название компании'],['companyAddress','Юридический адрес','textarea'],
+     ['companyCountry','Страна регистрации'],['companyRegistration','Регистрационный номер'],
+     ['companyEmail','Email компании'],['companyWebsite','Сайт'],
+     ['clientName','Имя клиента'],['clientId','ID клиента']
    ];
-   for(const group of groups){
-     const label=el('div','contracts-label',group.title);container.append(label);
-     const grid=el('div','contracts-field-grid');container.append(grid);
-     for(const [name,title,type] of group.rows){
+   const optional=[
+     ['accountId','Номер счёта'],['clientCountry','Страна проживания'],
+     ['governingLaw','Применимое право'],['jurisdiction','Компетентный суд / орган'],
+     ['regulator','Регулятор — только подтверждённый'],['authorization','Номер лицензии — только если есть'],
+     ['complaintsEmail','Email для жалоб'],['protectionScheme','Схема защиты инвесторов — если действует'],
+     ['services','Предоставляемые услуги','textarea'],['products','Доступные продукты','textarea'],
+     ['feeSchedule','Тарифы и комиссии'],['signatureMethod','Метод подтверждения согласия'],
+     ['issueDate','Дата документа','date']
+   ];
+   function makeFields(rows,parent){
+     const grid=el('div','contracts-field-grid');parent.append(grid);
+     for(const [name,title,type] of rows){
        const wrapper=el('label','contracts-field'+(type==='textarea'?' wide':''));
        wrapper.append(document.createTextNode(title));
        const input=el(type==='textarea'?'textarea':'input');
-       if(type!=='textarea')input.type=type==='date'?'date':'text';
-       else input.rows=2;
-       input.value=profile[name]||'';
-       input.dataset.contractField=name;
-       input.autocomplete='off';
+       if(type==='textarea')input.rows=2;else input.type=type==='date'?'date':'text';
+       input.value=profile[name]||'';input.dataset.contractField=name;input.autocomplete='off';
        input.addEventListener('input',()=>{profile[name]=input.value;save();render();});
        wrapper.append(input);grid.append(wrapper);
      }
    }
+   container.append(el('div','contracts-label','ОСНОВНЫЕ ДАННЫЕ ДЛЯ ДОГОВОРА'));
+   makeFields(main,container);
+   const advanced=el('details','contracts-extra-settings');
+   const summary=el('summary','', 'Дополнительные юридические сведения и настройки');
+   advanced.append(summary);
+   advanced.append(el('p','hint','Заполняйте только подтверждённые данные. Регулятор, лицензия, применимое право и состав услуг должны соответствовать действительности.'));
+   makeFields(optional,advanced);
+   container.append(advanced);
  }
  function syncFromTrade(force=false){
    const state=shared?.getState?.()||{};
@@ -157,9 +159,12 @@
  }
  function renderEditor(doc){
    const holder=$('contracts-clauses');holder.replaceChildren();
-   const label=el('div','contracts-label','MODIFICA DEL TESTO DELLA BOZZA');holder.append(label);
+   const advanced=el('details','contracts-advanced-text');
+   advanced.append(el('summary','','Редактировать юридический текст (дополнительно)'));
+   holder.append(advanced);
+   const label=el('div','contracts-label','MODIFICA DEL TESTO DELLA BOZZA');advanced.append(label);
    const help=el('p','contracts-lock','I paragrafi sono modificabili. Le modifiche restano in questo browser e valgono solo per il tipo di documento selezionato. Non inserire attestazioni false di firma, licenza o accettazione.');
-   holder.append(help);
+   advanced.append(help);
    doc.sections.forEach((section,i)=>{
      const details=el('details','contracts-clause');
      if(i===0)details.open=true;
@@ -177,7 +182,7 @@
        });
        label.append(area);details.append(label);
      });
-     holder.append(details);
+     advanced.append(details);
    });
  }
  function renderDocumentOnly(){
