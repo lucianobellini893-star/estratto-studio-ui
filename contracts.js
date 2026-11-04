@@ -394,6 +394,33 @@
    button.addEventListener('click',()=>{selected=type.id;save();render();status('');});
    $('contracts-type-list').append(button);
  });
+ $('contracts-bulk-replace').addEventListener('click',()=>{
+   const oldName=$('contracts-old-company-name').value.trim();
+   const replacement=String(profile.companyName||'').trim();
+   if(oldName.length<3){status('Введи полное старое название (минимум 3 символа), которое нужно заменить.',true);return;}
+   if(!replacement){status('Сначала введи своё название в поле «Название компании».',true);return;}
+   if(oldName.toLocaleLowerCase()===replacement.toLocaleLowerCase()){status('Старое и новое название совпадают.');return;}
+   let occurrences=0,affected=0;
+   for(const documentEdits of Object.values(overrides)){
+     if(!documentEdits||typeof documentEdits!=='object')continue;
+     for(const [key,text] of Object.entries(documentEdits)){
+       if(typeof text!=='string')continue;
+       // Only replace exact named entities, preserving the rest of the legal text.
+       // Do not alter unrelated broker, regulator or custody names automatically.
+       const parts=text.split(oldName);
+       if(parts.length===1)continue;
+       occurrences+=parts.length-1;affected++;
+       documentEdits[key]=parts.join(tokenFor('companyName'));
+     }
+   }
+   if(!occurrences){
+     status('Совпадений в отредактированных пунктах не найдено. Обычные пункты уже используют единый профиль компании.');
+     return;
+   }
+   save();render();
+   $('contracts-old-company-name').value='';
+   status('Заменено '+occurrences+' упоминаний в '+affected+' пунктах. Дальше название обновляется автоматически из профиля. Проверь юридические роли компаний.');
+ });
  $('contracts-sync').addEventListener('click',()=>syncFromTrade(true));
  $('contracts-export').addEventListener('click',exportPdf);
 
