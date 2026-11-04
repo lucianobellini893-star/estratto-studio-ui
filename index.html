@@ -12,7 +12,7 @@
 <script src="vendor/pdf.worker.min.js"></script>
 <script src="logo-composer.js?v=20261029-account-scope"></script>
 <link rel="stylesheet" href="interface.css?v=20261029-account-scope">
-<link rel="stylesheet" href="contracts.css?v=20261104-contracts1">
+<link rel="stylesheet" href="contracts.css?v=20261104-legal-design2">
 </head>
 <body>
 
@@ -294,6 +294,18 @@
           <section class="contracts-panel">
             <div class="contracts-label">ПРОФИЛЬ КОМПАНИИ И КЛИЕНТА</div>
             <p class="hint">Поля сохраняются только в этом браузере. Заполняйте реальные реквизиты; не указывайте вымышленную лицензию.</p>
+            <div class="contracts-style-panel">
+              <div class="contracts-label">ОФОРМЛЕНИЕ PDF</div>
+              <p class="hint">Цветные заголовки и акценты как в профессиональных договорах. Страницы остаются белыми, юридический текст — чёрным.</p>
+              <div class="contracts-colors">
+                <label class="contracts-field">Основной цвет <input type="color" id="contracts-color-primary" value="#085F94"></label>
+                <label class="contracts-field">Второй цвет <input type="color" id="contracts-color-secondary" value="#CD1935"></label>
+              </div>
+              <button type="button" id="contracts-colors-reset" class="btn small">Цвета по умолчанию</button>
+              <div class="contracts-rule"></div>
+              <label class="contracts-field">Номер редакции договора <input type="text" id="contracts-version-label" value="1.0" maxlength="40"></label>
+              <p class="hint">Редакция нужна для учёта версий, но сама по себе не доказывает согласие клиента.</p>
+            </div>
             <div id="contracts-fields" style="margin-top:14px"></div>
             <div class="contracts-rule"></div>
             <label class="contracts-field">Логотип для договора (SVG, PNG, JPG)<input type="file" id="contracts-logo-file" accept=".svg,image/svg+xml,.png,image/png,.jpg,.jpeg,image/jpeg"></label>
@@ -1643,6 +1655,6 @@ renderLogoParts();
 <script src="workspace-core.js?v=20261029-account-scope"></script>
 <script src="workspace.js?v=20261029-account-scope"></script>
 <script src="contracts-core.js?v=20261104-contracts1"></script>
-<script src="contracts.js?v=20261104-contracts1"></script>
+<script src="contracts.js?v=20261104-legal-design2"></script>
 </body>
 </html>
