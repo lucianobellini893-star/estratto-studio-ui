@@ -14,8 +14,8 @@
  let stored={};try{stored=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(_){}
  let profile={...defaults,...stored.profile},overrides=stored.overrides&&typeof stored.overrides==='object'?stored.overrides:{};
  let selected=core.types.some(type=>type.id===stored.selected)?stored.selected:'agreement';
- let logoData='',logoVersion=0,updating=false;
- function save(){try{localStorage.setItem(KEY,JSON.stringify({profile,overrides,selected}));}catch(_){status('Не удалось сохранить настройки локально.',true)}}
+ let logoData=typeof stored.logoData==='string'&&stored.logoData.startsWith('data:image/png;base64,')?stored.logoData:'',logoVersion=0,updating=false;
+ function save(){try{localStorage.setItem(KEY,JSON.stringify({profile,overrides,selected,logoData:logoData||''}));}catch(_){status('Не удалось сохранить настройки локально.',true)}}
  function status(text,error=false){const el=$('contracts-status');el.textContent=text||'';el.classList.toggle('err',error);}
  function el(tag,cls,value){
    const element=document.createElement(tag);
@@ -31,7 +31,7 @@
    if(!profile.companyWebsite&&state.coSite)profile.companyWebsite=state.coSite;
    if(!profile.clientName&&state.clientName)profile.clientName=state.clientName;
    if(!profile.clientId&&state.clientId)profile.clientId=state.clientId;
-   if(state.logoSvg&&shared?.sanitizeSvg&&shared?.rasterizeSvg){
+   if(!logoData&&state.logoSvg&&shared?.sanitizeSvg&&shared?.rasterizeSvg){
      const version=++logoVersion;
      shared.rasterizeSvg(shared.sanitizeSvg(state.logoSvg)).then(image=>{
        if(version!==logoVersion)return;
@@ -238,7 +238,7 @@
        if(version!==logoVersion)return;
        logoData=canvas.toDataURL('image/png');
      }else throw new Error('Поддерживаются SVG, PNG или JPG.');
-     status('Логотип загружен для предварительного просмотра и PDF.');render();
+     save();status('Логотип загружен для предварительного просмотра и PDF и сохранён в этом браузере.');render();
    }catch(e){status('Ошибка загрузки логотипа: '+(e.message||'некорректный файл'),true);}
  }
  core.types.forEach((type,index)=>{
@@ -255,5 +255,5 @@
    if(!confirm('Сбросить изменения текста выбранного шаблона? Реквизиты компании сохранятся.'))return;
    delete overrides[selected];save();render();status('Текст восстановлен по шаблону.');
  });
- fields();ensureLogo();save();render();
+ ensureLogo();fields();save();render();
 })();
