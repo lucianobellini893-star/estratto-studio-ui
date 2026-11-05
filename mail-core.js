@@ -49,7 +49,7 @@
       (/^data:image\/(?:jpeg|png);base64,[a-z0-9+/=]+$/i.test(state.signaturePhoto||'')?state.signaturePhoto:'');
     const name=safe(state.signatureName||'',100);
     const words=name.split(/\s+/).filter(Boolean);
-    const displayName=words.length>1?words.slice(0,-1).join(' ')+' <span style="color:#c99b58;">'+words[words.length-1]+'</span>':name;
+    const displayName=name;
     const signatureLogo=options.signatureLogoSource||png(state.signatureLogoData);
     const logoWidth=Math.min(245,Math.max(80,Number(state.signatureLogoWidth)||175));
     const logoColumnWidth=Math.min(260,logoWidth+20);
