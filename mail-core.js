@@ -78,8 +78,8 @@
     const brand=signatureLogo
       ?'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;width:100%;"><tr><td align="center" style="text-align:center;padding:0 0 12px;"><img src="'+escape(signatureLogo)+'" width="'+logoWidth+'" alt="'+(company||'Company logo')+'" style="display:block;width:'+logoWidth+'px;max-width:100%;height:auto;max-height:130px;object-fit:contain;margin:0 auto;border:0;"></td></tr></table>'
       :'<div style="border:1px dashed #666;border-radius:5px;padding:12px 4px;text-align:center;color:#aaa;font-size:11px;margin-bottom:12px;">'+(company||'YOUR LOGO')+'</div>';
-    return '<tr><td style="padding:24px 0 0;">'
-      +'<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" bgcolor="#050505" style="width:100%;max-width:760px;min-height:165px;background-color:#050505;border:1px solid #252525;border-radius:12px;border-collapse:separate;overflow:hidden;">'
+    return '<tr><td style="padding:0;">'
+      +'<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" bgcolor="#050505" style="width:100%;max-width:760px;min-height:165px;background-color:#050505;border:1px solid #252525;border-top:0;border-radius:0 0 12px 12px;border-collapse:separate;overflow:hidden;">'
       +'<tr><td valign="middle" style="padding:17px;">'
       +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;"><tr>'
       +'<td valign="middle" style="padding:0 14px 0 0;">'+identity+'</td>'
@@ -96,9 +96,12 @@
     const heading=title?`<h1 style="margin:0 0 20px;font-family:${font};font-size:21px;line-height:30px;font-weight:600;color:#202020;">${escape(title)}</h1>`:'';
     const footer=signature(state,options);
     const signatureWidth=state.footerEnabled&&state.footerStyle==='card'?760:560;
+    const joinedSignature=state.footerEnabled&&state.footerStyle==='card';
+    const bodyRadius=joinedSignature?'12px 12px 0 0':'12px';
+    const bodyBottomBorder=joinedSignature?'border-bottom:0;':'';
     const fragment=`<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#f4f4f5" style="width:100%;background-color:#f4f4f5;border-collapse:collapse;margin:0;"><tr><td align="center" class="mail-outer-padding" style="padding:40px 24px 56px;">
 <!--[if mso]><table role="presentation" width="${signatureWidth}" border="0" cellspacing="0" cellpadding="0"><tr><td><![endif]-->
-<table role="presentation" width="${signatureWidth}" border="0" cellspacing="0" cellpadding="0" style="width:100%;max-width:${signatureWidth}px;border-collapse:separate;">${logo}<tr><td class="mail-content-padding" align="left" bgcolor="#ffffff" style="padding:32px;background-color:#ffffff;border:1px solid #e7e7ed;border-radius:12px;text-align:left;word-wrap:break-word;">${heading}${body}</td></tr>${footer}</table>
+<table role="presentation" width="${signatureWidth}" border="0" cellspacing="0" cellpadding="0" style="width:100%;max-width:${signatureWidth}px;border-collapse:separate;">${logo}<tr><td class="mail-content-padding" align="left" bgcolor="#ffffff" style="padding:32px;background-color:#ffffff;border:1px solid #e7e7ed;${bodyBottomBorder}border-radius:${bodyRadius};text-align:left;word-wrap:break-word;">${heading}${body}</td></tr>${footer}</table>
 <!--[if mso]></td></tr></table><![endif]-->
 </td></tr></table>`;
     let base=https(options.fontBase);
