@@ -6,6 +6,30 @@
  const today=()=>new Date().toISOString().slice(0,10);
  const fresh=()=>({date:today(),reference:'',beneficiary:'',bank:'',iban:'',bic:'',amount:'',fee:'0',currency:'EUR',status:'requested',bankRef:'',details:''});
  const labels={date:'Дата заявки',reference:'Номер заявки',beneficiary:'Получатель',bank:'Банк получателя',iban:'IBAN / номер счёта',bic:'BIC / SWIFT',amount:'Сумма вывода',fee:'Комиссия',currency:'Валюта',status:'Статус',bankRef:'Референс банка (если подтверждён)',details:'Описание'};
+ const logoSlot=$('withdrawal-logo-slot');
+ const companyInputs={coName:$('wd-company-name'),coAddr:$('wd-company-address'),coSite:$('wd-company-site')};
+ function syncCompanyFields(){
+  const data=doc.getState?.()||{};
+  for(const [key,input] of Object.entries(companyInputs)){
+   if(input&&document.activeElement!==input)input.value=String(data[key]||'');
+  }
+ }
+ function showValidation(text,error=true){
+  const box=$('wd-validation');
+  if(!box)return;
+  box.textContent=text||'';
+  box.hidden=!text;
+  box.classList.toggle('error',!!error);
+ }
+ function moveLogoHere(){
+  const editor=$('shared-logo-editor');
+  if(!logoSlot||!editor)return;
+  logoSlot.append(editor);
+  const heading=$('h-logo')?.querySelector('.step');
+  if(heading)heading.textContent='3';
+  doc.relayoutLogo?.();
+  syncCompanyFields();
+ }
  const statuses={requested:'Richiesto',review:'In verifica',processing:'In elaborazione',sent:'Inviato (non verificato)',completed:'Completato (non verificato)',rejected:'Rifiutato',cancelled:'Annullato'};
  let state={client:'',publicId:'',date:today(),rows:[fresh()]};
  try{let saved=JSON.parse(localStorage.getItem(key)||'null');if(saved&&typeof saved==='object')state={...state,...saved,rows:Array.isArray(saved.rows)?saved.rows.slice(0,40):[fresh()]};}catch(_){}
@@ -105,8 +129,8 @@
  }
  async function build(){
   const id=++buildId,checked=check();
-  if(checked.issues.length){last=null;$('wd-download').disabled=true;$('wd-status').textContent='Заполни обязательные поля';notice(checked.issues[0],true);return}
-  $('wd-status').textContent='Готовлю PDF…';$('wd-download').disabled=true;notice('');
+  if(checked.issues.length){last=null;$('wd-download').disabled=false;$('wd-status').textContent='Нужно исправить данные';notice(checked.issues[0],true);showValidation(checked.issues[0]);return}
+  $('wd-status').textContent='Готовлю PDF…';$('wd-download').disabled=false;notice('');showValidation('');
   try{
    const profile=doc.collectProfile();
    if(!profile.coName||!profile.coAddr?.length)throw Error('В настройках выписок укажи настоящее название и адрес компании.');
@@ -116,9 +140,9 @@
    last={bytes:pdf.bytes,pages:pdf.pages};$('wd-download').disabled=false;
    $('wd-status').textContent=pdf.pages+' стр. · '+checked.rows.length+' операций';
    if($('page-withdrawal').classList.contains('active'))await preview(pdf.bytes,++viewId);
-  }catch(e){if(id!==buildId)return;last=null;$('wd-download').disabled=true;$('wd-status').textContent='PDF недоступен';notice('Ошибка PDF: '+(e?.message||'неизвестно'),true)}
+  }catch(e){if(id!==buildId)return;last=null;$('wd-download').disabled=false;$('wd-status').textContent='PDF недоступен';const why='Не удалось создать PDF: '+(e?.message||'неизвестно');notice(why,true);showValidation(why)}
  }
- function schedule(){last=null;$('wd-download').disabled=true;clearTimeout(timer);timer=setTimeout(build,450)}
+ function schedule(){last=null;clearTimeout(timer);timer=setTimeout(build,450)}
  for(const [id,key] of [['wd-client','client'],['wd-id','publicId'],['wd-date','date']]){
   $(id).value=state[key]||'';$(id).addEventListener('input',()=>{state[key]=$(id).value;store();schedule()});
  }
@@ -129,7 +153,12 @@
   $('wd-client').value=state.client;$('wd-id').value=state.publicId;store();schedule()
  });
  $('wd-download').addEventListener('click',async()=>{
-  if(!last)return notice('Сначала заполни данные и сформируй PDF.',true);
+  // Clicking download always attempts an up-to-date build and reports failures visibly.
+  if(!last){
+   clearTimeout(timer);
+   await build();
+   if(!last){$('wd-validation')?.scrollIntoView({block:'center',behavior:'smooth'});return;}
+  }
   try{
    const blob=new Blob([last.bytes],{type:'application/pdf'}),filename='Prelievi_bancari_'+state.date+'.pdf';
    if(window.EstrattoDownloads?.save)await window.EstrattoDownloads.save({filename,data:blob});
@@ -137,6 +166,23 @@
    notice('PDF сохранён. Статусы не являются банковским подтверждением.');
   }catch(e){notice('Не удалось скачать PDF: '+(e?.message||'ошибка'),true)}
  });
- document.addEventListener('estratto:navigate',e=>{if(e.detail==='withdrawal')schedule()});
- drawRows();if($('page-withdrawal').classList.contains('active'))schedule();
+ // The legal-entity fields and SVG editor are the same ones used by other statements.
+ for(const [key,input] of Object.entries(companyInputs)){
+  input?.addEventListener('input',()=>{
+   const original={coName:'co-name',coAddr:'co-addr',coSite:'co-site'}[key];
+   const base=$(original);
+   if(!base||base.value===input.value)return;
+   base.value=input.value;
+   base.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+ }
+ document.addEventListener('estratto:profilechange',()=>{
+  syncCompanyFields();
+  if($('page-withdrawal').classList.contains('active'))schedule();
+ });
+ document.addEventListener('estratto:navigate',e=>{
+  if(e.detail==='withdrawal'){moveLogoHere();schedule();}
+ });
+ drawRows();syncCompanyFields();
+ if($('page-withdrawal').classList.contains('active')){moveLogoHere();schedule();}
 })();
