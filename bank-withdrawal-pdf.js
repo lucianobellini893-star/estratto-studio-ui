@@ -83,7 +83,7 @@
   font(true,7.4,'#3A3F4B');doc.text('CAMPO',MX+4,y+5.5);doc.text('INFORMAZIONE',MX+leftWidth+4,y+5.5);y+=8;
   for(const [i,[label,value]] of items.entries()){
    const wrapped=lines(value,valueWidth,false,8.4);
-   const height=Math.max(7.5,wrapped.length*4.1+2.5);
+   const height=Math.max(6.9,wrapped.length*3.8+2.7);
    if(y+height>173){
     doc.addPage('a4','landscape');y=24;
     font(true,10,color.blue);doc.text('Prelievo bancario (segue)',MX,y);y+=9;
@@ -94,7 +94,7 @@
    doc.setDrawColor(color.light);doc.line(MX,y+height,RIGHT,y+height);
    font(false,8,color.muted);doc.text(label,MX+4,y+5);
    font(label==='Stato dichiarato',8.4,color.ink);
-   wrapped.forEach((line,j)=>doc.text(line,MX+leftWidth+4,y+5+j*4.1));
+   wrapped.forEach((line,j)=>doc.text(line,MX+leftWidth+4,y+4.8+j*3.8));
    y+=height;
   }
   const footerY=183;
