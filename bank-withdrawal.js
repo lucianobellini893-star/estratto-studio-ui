@@ -139,7 +139,13 @@
    if(id!==buildId)return;
    last={bytes:pdf.bytes,pages:pdf.pages};$('wd-download').disabled=false;
    $('wd-status').textContent=pdf.pages+' стр. · '+checked.rows.length+' операций';
-   if($('page-withdrawal').classList.contains('active'))await preview(pdf.bytes,++viewId);
+   if($('page-withdrawal').classList.contains('active')){
+    try{await preview(pdf.bytes,++viewId);}
+    catch(error){
+     $('wd-status').textContent='PDF готов · предпросмотр недоступен';
+     showValidation('PDF создан и его можно скачать. Ошибка только в предпросмотре: '+(error?.message||'не удалось отобразить страницы'),true);
+    }
+   }
   }catch(e){if(id!==buildId)return;last=null;$('wd-download').disabled=false;$('wd-status').textContent='PDF недоступен';const why='Не удалось создать PDF: '+(e?.message||'неизвестно');notice(why,true);showValidation(why)}
  }
  function schedule(){last=null;clearTimeout(timer);timer=setTimeout(build,450)}
