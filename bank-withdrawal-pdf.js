@@ -84,7 +84,12 @@
   for(const [i,[label,value]] of items.entries()){
    const wrapped=lines(value,valueWidth,false,8.4);
    const height=Math.max(7.5,wrapped.length*4.1+2.5);
-   if(y+height>174)throw Error('Данные слишком длинные для одной страницы. Сократи описание.');
+   if(y+height>173){
+    doc.addPage('a4','landscape');y=24;
+    font(true,10,color.blue);doc.text('Prelievo bancario (segue)',MX,y);y+=9;
+    doc.setFillColor(color.head);doc.rect(MX,y,rowWidth,8,'F');
+    font(true,7.4,'#3A3F4B');doc.text('CAMPO',MX+4,y+5.5);doc.text('INFORMAZIONE',MX+leftWidth+4,y+5.5);y+=8;
+   }
    if(i%2===1){doc.setFillColor(color.alt);doc.rect(MX,y,rowWidth,height,'F');}
    doc.setDrawColor(color.light);doc.line(MX,y+height,RIGHT,y+height);
    font(false,8,color.muted);doc.text(label,MX+4,y+5);
@@ -99,8 +104,11 @@
   const warning='Compilato dai dati inseriti. L’avvenuta esecuzione, l’invio o l’accredito del bonifico non sono verificati da questo documento. Per una conferma occorre la documentazione della banca o del prestatore di servizi di pagamento.';
   lines(warning,214,false,7).forEach((line,i)=>doc.text(line,MX,footerY+11+i*3.2));
   if(profile.siteCaption){font(false,7,color.muted);doc.text(String(profile.siteCaption).slice(0,55),RIGHT,footerY+11,{align:'right'});}
-  font(false,7,color.muted);doc.text('Pagina 1 di 1',MX,205);
-  return {bytes:doc.output('arraybuffer'),pages:1};
+  const pages=doc.getNumberOfPages();
+  for(let i=1;i<=pages;i++){
+   doc.setPage(i);font(false,7,color.muted);doc.text('Pagina '+i+' di '+pages,MX,205);
+  }
+  return {bytes:doc.output('arraybuffer'),pages};
  }
  return {generate};
 });
