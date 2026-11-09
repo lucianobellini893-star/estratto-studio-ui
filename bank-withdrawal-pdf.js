@@ -40,7 +40,7 @@
   function lines(value,width,bold=false,size=9){
    font(bold,size);return doc.splitTextToSize(String(value||'—'),width);
   }
-  const issue=String(state.date||'').split('-').reverse().join('/');
+  const issue=String(entry.date||'').split('-').reverse().join('/');
   const originalDate=String(entry.date||state.date||'').split('-').reverse().join('/');
   // Paper header: firm logo, legal name and address, consistent with the
   // separate Estratto PDF family. No account ledger, trade period or balance.
