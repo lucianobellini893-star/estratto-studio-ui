@@ -30,6 +30,7 @@
      <button type="button" data-page="editor" class="nav-child"><span>Trade Statements</span><span class="nav-badge mint">LIVE</span></button>
      <button type="button" data-page="account" class="nav-child"><span>Account Statements</span><span class="nav-badge mint">LIVE</span></button>
      <button type="button" data-page="withdrawal" class="nav-child"><span>Bank Withdrawal</span><span class="nav-badge mint">NEW</span></button>
+     <button type="button" data-page="transfer" class="nav-child"><span>Bank Transfer / Accredito</span><span class="nav-badge mint">NEW</span></button>
      <button type="button" data-page="drafts" class="nav-child"><span>Черновики</span><span class="nav-badge mint">LOCAL</span></button>
      <button type="button" class="nav-child" data-page="history"><span>История</span></button>
      <div class="nav-child nav-disabled"><span>Scheduled</span></div>
@@ -53,6 +54,7 @@
       <button type="button" data-page="editor" class="top-tab">Выписки по сделкам</button>
       <button type="button" data-page="account" class="top-tab">Торговый счёт</button>
       <button type="button" data-page="withdrawal" class="top-tab">Банковский вывод</button>
+      <button type="button" data-page="transfer" class="top-tab">Получение средств</button>
       <button type="button" data-page="mail" class="top-tab">Письма</button>
     </nav>
     <div class="top-actions"><span class="secure-tag"><span class="secure-dot"></span>Локальная работа</span><div class="account-avatar">ES</div></div>
@@ -312,6 +314,40 @@
        <div class="pv-bar"><span class="t">Prelievo bancario</span><span class="s" id="wd-status" role="status">Заполни данные</span><button type="button" class="btn primary" id="wd-download">Скачать PDF</button></div>
        <div class="msg" id="wd-validation" role="alert" hidden></div>
        <div class="stage" id="wd-stage"><div class="account-preview-empty"><span class="micro-label">ПРЕДПРОСМОТР PDF</span><p>Документ появится после заполнения данных этого вывода.</p></div></div>
+      </aside>
+    </div>
+   </section>
+   <section id="page-transfer" class="studio-page" aria-label="Документ о переводе средств на банковский счёт получателя">
+    <div class="editor-heading"><div><div class="eyebrow">ДОКУМЕНТЫ / ПОЛУЧЕНИЕ СРЕДСТВ</div><h1>Перевод на банковский счёт получателя <span class="heading-subtle">/ Trasferimento bancario</span></h1><p>Отдельный PDF о переводе средств на банковский счёт получателя, без привязки к торговым операциям.</p></div><button type="button" class="back-overview" data-page="overview">← К обзору</button></div>
+    <div class="editor-layout account-layout">
+      <div class="controls">
+       <section class="card">
+        <h2><span class="step">1</span>Клиент</h2>
+        <label class="f">Клиент<input type="text" id="bt-client" maxlength="80" placeholder="Имя получателя"></label>
+        <label class="f">ID клиента (необязательно)<input type="text" id="bt-id" maxlength="49" placeholder="Идентификатор клиента"></label>
+        <p class="hint">Эти данные вводятся прямо здесь, без связи с историей торговых операций.</p>
+       </section>
+       <section class="card">
+        <h2><span class="step">2</span>Перевод на банковский счёт</h2>
+        <p class="hint">Заполни дату перевода, сумму к получению и банковские реквизиты. Статус зачисления должен соответствовать фактическим сведениям.</p>
+        <div id="bt-rows"></div>
+        <span id="bt-count" hidden>1</span>
+       </section>
+       <section class="card">
+        <h2><span class="step">3</span>Компания и логотип SVG</h2>
+        <p class="hint">Здесь тот же полноценный SVG-редактор, что в других выписках: загрузка, выбор частей, изменение цветов и расположения. Изменения в общем профиле компании применяются ко всем выпискам.</p>
+        <label class="f">Название компании<input type="text" id="bt-company-name" autocomplete="off" placeholder="Название юридического лица"></label>
+        <label class="f">Адрес компании<textarea id="bt-company-address" rows="2" placeholder="Юридический адрес"></textarea></label>
+        <label class="f">Сайт компании<input type="text" id="bt-company-site" autocomplete="off" placeholder="www.example.com"></label>
+        <div id="transfer-logo-slot"></div>
+        <p class="hint">Документ составляется по введённым сведениям. Подтверждённое зачисление указывай только при наличии подтверждения банка.</p>
+        <div class="msg" id="bt-msg" role="status" hidden></div>
+       </section>
+      </div>
+      <aside class="preview-panel">
+       <div class="pv-bar"><span class="t">Prelievo bancario</span><span class="s" id="bt-status" role="status">Заполни данные</span><button type="button" class="btn primary" id="bt-download">Скачать PDF</button></div>
+       <div class="msg" id="bt-validation" role="alert" hidden></div>
+       <div class="stage" id="bt-stage"><div class="account-preview-empty"><span class="micro-label">ПРЕДПРОСМОТР PDF</span><p>PDF перевода появится после заполнения полей.</p></div></div>
       </aside>
     </div>
    </section>
@@ -1738,10 +1774,10 @@ renderLogoParts();
   'use strict';
   const pageButtons = [...document.querySelectorAll('[data-page]')];
   function navigate(page){
-    if(!['overview','editor','account','withdrawal','mail','contracts','upcoming','drafts','clients','backup','history','templates'].includes(page))return;
+    if(!['overview','editor','account','withdrawal','transfer','mail','contracts','upcoming','drafts','clients','backup','history','templates'].includes(page))return;
     for(const p of document.querySelectorAll('.studio-page'))p.classList.toggle('active',p.id === 'page-'+page);
     for(const b of pageButtons){b.classList.toggle('active',b.dataset.page===page); if(b.classList.contains('nav-main') || b.classList.contains('nav-child')) { if(b.dataset.page===page)b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); }}
-    const documentsOpen=['editor','account','withdrawal','contracts','upcoming','drafts','history'].includes(page);
+    const documentsOpen=['editor','account','withdrawal','transfer','contracts','upcoming','drafts','history'].includes(page);
     const documentsGroup=document.getElementById('documents-group');
     documentsGroup.classList.toggle('expanded',documentsOpen);
     documentsGroup.querySelector('.nav-toggle').setAttribute('aria-expanded',String(documentsOpen));
@@ -1763,7 +1799,7 @@ renderLogoParts();
   for(const id of ['cnt-aperte','cnt-chiuse'])watcher.observe(document.getElementById(id),{childList:true,characterData:true,subtree:true});
   updateMetrics();
   window.EstrattoNavigate=navigate;
-  if(['#editor','#account','#withdrawal','#mail','#contracts','#drafts','#clients','#backup','#history','#templates'].includes(location.hash))navigate(location.hash.slice(1));
+  if(['#editor','#account','#withdrawal','#transfer','#mail','#contracts','#drafts','#clients','#backup','#history','#templates'].includes(location.hash))navigate(location.hash.slice(1));
 })();
 </script>
 <script src="account-assets.js?v=20261029-account-scope"></script>
@@ -1779,6 +1815,8 @@ renderLogoParts();
 <script src="workspace.js?v=20261029-account-scope"></script>
 <script src="bank-withdrawal-pdf.js?v=20261109-footer-clean2"></script>
 <script src="bank-withdrawal.js?v=20261109-status-clean"></script>
+<script src="bank-transfer-pdf.js?v=20261109-transfer1"></script>
+<script src="bank-transfer.js?v=20261109-transfer1"></script>
 <script src="contracts-expanded.js?v=20261104-expanded1"></script>
 <script src="contracts-clauses.js?v=20261104-longform1"></script>
 <script src="contracts-core.js?v=20261104-longform1"></script>
