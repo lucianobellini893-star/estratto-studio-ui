@@ -276,7 +276,8 @@
     shared.relayoutLogo();
   }
   document.addEventListener('estratto:navigate',event=>{
-    moveLogo(event.detail);
+    // Other document editors mount this same SVG element in their own slots.
+    if(event.detail==='account'||event.detail==='editor')moveLogo(event.detail);
     if(event.detail==='account'&&lastPdf)renderPreview(lastPdf).catch(previewError);
   });
   let resizeTimer;
