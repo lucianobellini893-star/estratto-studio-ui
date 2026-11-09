@@ -281,39 +281,37 @@
      </aside>
     </div>
    </section>
-   <section id="page-withdrawal" class="studio-page" aria-label="Выписка по выводу средств на банковский счёт">
-    <div class="editor-heading"><div><div class="eyebrow">ДОКУМЕНТЫ / БАНКОВСКИЕ ВЫВОДЫ</div><h1>Выписка по выводам <span class="heading-subtle">/ Prelievi bancari</span></h1><p>Сведения о заявках на вывод на банковский счёт в том же PDF-оформлении, что другие выписки.</p></div><button type="button" class="back-overview" data-page="overview">← К обзору</button></div>
+   <section id="page-withdrawal" class="studio-page" aria-label="Документ об одном выводе на банковский счёт">
+    <div class="editor-heading"><div><div class="eyebrow">ДОКУМЕНТЫ / БАНКОВСКИЙ ВЫВОД</div><h1>Вывод на банковский счёт <span class="heading-subtle">/ Prelievo bancario</span></h1><p>Один отдельный PDF по конкретному выводу. Не связан с операциями торгового счёта и не требует периода выписки.</p></div><button type="button" class="back-overview" data-page="overview">← К обзору</button></div>
     <div class="editor-layout account-layout">
       <div class="controls">
        <section class="card">
-        <h2><span class="step">1</span>Клиент и период</h2>
-        <label class="f">Клиент<input type="text" id="wd-client" maxlength="80" placeholder="Имя владельца счёта"></label>
-        <label class="f">Публичный ID<input type="text" id="wd-id" maxlength="49" placeholder="ID клиента"></label>
-        <label class="f">Дата выписки<input type="date" id="wd-date"></label>
-        <button type="button" class="btn small" id="wd-copy-client">Взять клиента из выписок</button>
+        <h2><span class="step">1</span>Клиент</h2>
+        <label class="f">Клиент<input type="text" id="wd-client" maxlength="80" placeholder="Имя получателя"></label>
+        <label class="f">ID клиента (необязательно)<input type="text" id="wd-id" maxlength="49" placeholder="Идентификатор клиента"></label>
+        <p class="hint">Эти данные вводятся прямо здесь, без связи с историей торговых операций.</p>
        </section>
        <section class="card">
-        <h2><span class="step">2</span>Выводы на банковский счёт <span class="count" id="wd-count">1</span></h2>
-        <p class="hint">Указывай реальные данные каждой заявки: получатель, банк, IBAN, сумма, комиссия, дата и статус. Допускается несколько переводов.</p>
+        <h2><span class="step">2</span>Один банковский вывод</h2>
+        <p class="hint">Заполни дату вывода, сумму, получателя, банк и банковские реквизиты. Документ формируется только для этой заявки.</p>
         <div id="wd-rows"></div>
-        <button type="button" class="btn small" id="wd-add">+ Добавить вывод</button>
+        <span id="wd-count" hidden>1</span>
        </section>
        <section class="card">
-        <h2><span class="step">3</span>Оформление и подтверждение</h2>
-        <p class="hint">Тот же полноценный SVG-редактор, что в Trade и Account Statements. Можно загружать части SVG, менять цвета, масштаб и расположение. Настройки логотипа общие для выписок.</p>
+        <h2><span class="step">3</span>Компания и логотип SVG</h2>
+        <p class="hint">Здесь тот же полноценный SVG-редактор, что в других выписках: загрузка, выбор частей, изменение цветов и расположения. Изменения в общем профиле компании применяются ко всем выпискам.</p>
         <label class="f">Название компании<input type="text" id="wd-company-name" autocomplete="off" placeholder="Название юридического лица"></label>
         <label class="f">Адрес компании<textarea id="wd-company-address" rows="2" placeholder="Юридический адрес"></textarea></label>
-        <label class="f">Сайт для QR-кода<input type="text" id="wd-company-site" autocomplete="off" placeholder="www.example.com"></label>
-        <p class="hint">Это общие реквизиты с другими выписками. Меняя их здесь, ты меняешь общий профиль компании.</p>
+        <label class="f">Сайт компании<input type="text" id="wd-company-site" autocomplete="off" placeholder="www.example.com"></label>
         <div id="withdrawal-logo-slot"></div>
-        <p class="hint">PDF содержит только указанные данные. Заявка и статус не подтверждают исполнение перевода банком.</p>
+        <p class="hint">Этот PDF — сведения об указанном выводе, а не подтверждение банка о выполненном переводе или зачислении.</p>
         <div class="msg" id="wd-msg" role="status" hidden></div>
        </section>
       </div>
       <aside class="preview-panel">
-       <div class="pv-bar"><span class="t">Prelievi bancari</span><span class="s" id="wd-status" role="status">Заполни данные</span><button type="button" class="btn primary" id="wd-download">Скачать PDF</button></div>
+       <div class="pv-bar"><span class="t">Prelievo bancario</span><span class="s" id="wd-status" role="status">Заполни данные</span><button type="button" class="btn primary" id="wd-download">Скачать PDF</button></div>
        <div class="msg" id="wd-validation" role="alert" hidden></div>
-       <div class="stage" id="wd-stage"><div class="account-preview-empty"><span class="micro-label">ПРЕДПРОСМОТР PDF</span><p>Выписка появится после заполнения данных.</p></div></div>
+       <div class="stage" id="wd-stage"><div class="account-preview-empty"><span class="micro-label">ПРЕДПРОСМОТР PDF</span><p>Документ появится после заполнения данных этого вывода.</p></div></div>
       </aside>
     </div>
    </section>
@@ -1779,7 +1777,8 @@ renderLogoParts();
 <script src="mail.js?v=20261104-logo-centered"></script>
 <script src="workspace-core.js?v=20261029-account-scope"></script>
 <script src="workspace.js?v=20261029-account-scope"></script>
-<script src="bank-withdrawal.js?v=20261109-logo-pdf-fix3"></script>
+<script src="bank-withdrawal-pdf.js?v=20261109-single1"></script>
+<script src="bank-withdrawal.js?v=20261109-single1"></script>
 <script src="contracts-expanded.js?v=20261104-expanded1"></script>
 <script src="contracts-clauses.js?v=20261104-longform1"></script>
 <script src="contracts-core.js?v=20261104-longform1"></script>
