@@ -11,7 +11,7 @@
   return [date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
  };
  const empty=()=>({date:today(),reference:'',beneficiary:'',bank:'',iban:'',bic:'',amount:'',fee:'0',currency:'EUR',status:'requested',bankRef:'',details:''});
- const statuses={requested:'Richiesto',review:'In verifica',processing:'In elaborazione',sent:'Inviato alla banca (non verificato)',completed:'Completato (non verificato)',rejected:'Rifiutato',cancelled:'Annullato'};
+ const statuses={requested:'Richiesto',review:'In verifica',processing:'In elaborazione',sent:'Inviato alla banca',completed:'Completato',rejected:'Rifiutato',cancelled:'Annullato'};
  const labels={date:'Дата вывода',reference:'Номер заявки (необязательно)',beneficiary:'Получатель на банковском счёте',bank:'Название банка',iban:'IBAN / номер счёта',bic:'BIC / SWIFT (необязательно)',amount:'Сумма',fee:'Комиссия',currency:'Валюта',status:'Статус заявки',bankRef:'Референс банка (при наличии)',details:'Примечание'};
  let state={client:'',publicId:'',rows:[empty()]};
  try{
