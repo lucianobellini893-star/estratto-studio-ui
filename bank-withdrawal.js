@@ -1,194 +1,188 @@
-/* Independent bank withdrawal statement module. Records operator-entered requests,
-   not proof of transfer execution or bank receipt. Existing generators untouched. */
-(()=>{'use strict';
- const $=id=>document.getElementById(id),doc=window.EstrattoDocument,num=window.EstrattoAccount;
- const key='estratto-withdrawal.v1';
- const today=()=>new Date().toISOString().slice(0,10);
- const fresh=()=>({date:today(),reference:'',beneficiary:'',bank:'',iban:'',bic:'',amount:'',fee:'0',currency:'EUR',status:'requested',bankRef:'',details:''});
- const labels={date:'Дата заявки',reference:'Номер заявки',beneficiary:'Получатель',bank:'Банк получателя',iban:'IBAN / номер счёта',bic:'BIC / SWIFT',amount:'Сумма вывода',fee:'Комиссия',currency:'Валюта',status:'Статус',bankRef:'Референс банка (если подтверждён)',details:'Описание'};
+/* Standalone single bank withdrawal. No account transactions or statement dates. */
+(() => {
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ const shared=window.EstrattoDocument;
+ const numbers=window.EstrattoAccount;
+ const renderer=window.EstrattoWithdrawalPdf;
+ const storageKey='estratto-withdrawal.v1';
+ const today=()=>{
+  const date=new Date();
+  return [date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
+ };
+ const empty=()=>({date:today(),reference:'',beneficiary:'',bank:'',iban:'',bic:'',amount:'',fee:'0',currency:'EUR',status:'requested',bankRef:'',details:''});
+ const statuses={requested:'Richiesto',review:'In verifica',processing:'In elaborazione',sent:'Inviato alla banca (non verificato)',completed:'Completato (non verificato)',rejected:'Rifiutato',cancelled:'Annullato'};
+ const labels={date:'Дата вывода',reference:'Номер заявки (необязательно)',beneficiary:'Получатель на банковском счёте',bank:'Название банка',iban:'IBAN / номер счёта',bic:'BIC / SWIFT (необязательно)',amount:'Сумма',fee:'Комиссия',currency:'Валюта',status:'Статус заявки',bankRef:'Референс банка (при наличии)',details:'Примечание'};
+ let state={client:'',publicId:'',rows:[empty()]};
+ try{
+  const saved=JSON.parse(localStorage.getItem(storageKey)||'null');
+  if(saved&&typeof saved==='object')state={
+   client:String(saved.client||''),publicId:String(saved.publicId||''),
+   rows:[{...empty(),...((Array.isArray(saved.rows)&&saved.rows[0])||{})}]
+  };
+ }catch(_){}
+ const entry=state.rows[0];
+ let last=null,cycle=0,viewCycle=0,timer;
+ const make=(tag,text)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el;};
+ const notice=(text,error=false)=>{
+  for(const id of ['wd-msg','wd-validation']){
+   const el=$(id);if(!el)continue;el.textContent=text||'';el.hidden=!text;el.classList.toggle('error',error);
+  }
+ };
+ function save(){
+  try{localStorage.setItem(storageKey,JSON.stringify({client:state.client,publicId:state.publicId,rows:[entry]}));}
+  catch(_){notice('Не получилось сохранить черновик в браузере. Проверь настройки локального хранилища.',true);}
+ }
+ function values(){
+  const errors=[];
+  if(!state.client.trim())errors.push('Укажи имя клиента.');
+  if(!numbers.validDate(entry.date))errors.push('Укажи корректную дату вывода.');
+  if(!entry.beneficiary.trim())errors.push('Укажи получателя банковского перевода.');
+  if(!entry.bank.trim())errors.push('Укажи название банка получателя.');
+  const iban=String(entry.iban||'').replace(/\s/g,'').toUpperCase();
+  const bic=String(entry.bic||'').replace(/\s/g,'').toUpperCase();
+  const currency=String(entry.currency||'').trim().toUpperCase();
+  if(!/^[A-Z0-9]{4,45}$/.test(iban))errors.push('Укажи корректный IBAN или номер банковского счёта.');
+  if(bic&&!/^[A-Z0-9]{8}([A-Z0-9]{3})?$/.test(bic))errors.push('BIC/SWIFT должен состоять из 8 или 11 букв и цифр.');
+  if(!/^[A-Z]{3}$/.test(currency))errors.push('Укажи валюту тремя латинскими буквами.');
+  if(!statuses[entry.status])errors.push('Выбери статус вывода.');
+  let sum='',fee='';
+  try{
+   const amount=numbers.decimal(entry.amount,'Сумма вывода');
+   if(amount.units<=0n)throw Error('Сумма вывода должна быть больше нуля.');
+   sum=numbers.money(numbers.toMoney(amount));
+  }catch(e){errors.push(e.message);}
+  try{
+   const amount=numbers.decimal(entry.fee||'0','Комиссия');
+   if(amount.units<0n)throw Error('Комиссия не может быть отрицательной.');
+   fee=numbers.money(numbers.toMoney(amount));
+  }catch(e){errors.push(e.message);}
+  if(entry.status==='requested'&&entry.bankRef.trim())errors.push('Для заявки без отправки в банк убери банковский референс или укажи соответствующий статус.');
+  return {errors,transfer:{...entry,iban,bic,currency},sum,fee};
+ }
+ function fields(){
+  const root=$('wd-rows');root.replaceChildren();
+  const grid=make('div');grid.className='wd-fields';
+  for(const [field,label] of Object.entries(labels)){
+   const holder=make('label',label);holder.className='f';
+   const el=make(field==='status'?'select':'input');
+   if(field==='status'){
+    for(const [key,value] of Object.entries(statuses)){
+     const option=make('option',value);option.value=key;el.append(option);
+    }
+   }else{
+    el.type=field==='date'?'date':'text';el.autocomplete='off';
+    el.maxLength=field==='details'?200:field==='iban'?45:110;
+   }
+   if(field==='iban')el.placeholder='IT60 X054 2811 1010 0000 0123 456';
+   if(field==='reference')el.placeholder='WD-2026-0001';
+   el.value=entry[field]||'';
+   el.addEventListener('input',()=>{
+    entry[field]=el.value;
+    save();schedule();
+   });
+   holder.append(el);grid.append(holder);
+  }
+  root.append(grid);
+ }
  const logoSlot=$('withdrawal-logo-slot');
- const companyInputs={coName:$('wd-company-name'),coAddr:$('wd-company-address'),coSite:$('wd-company-site')};
- function syncCompanyFields(){
-  const data=doc.getState?.()||{};
-  for(const [key,input] of Object.entries(companyInputs)){
+ const companyFields={coName:$('wd-company-name'),coAddr:$('wd-company-address'),coSite:$('wd-company-site')};
+ function syncCompany(){
+  const data=shared.getState?.()||{};
+  for(const [key,input] of Object.entries(companyFields)){
    if(input&&document.activeElement!==input)input.value=String(data[key]||'');
   }
  }
- function showValidation(text,error=true){
-  const box=$('wd-validation');
-  if(!box)return;
-  box.textContent=text||'';
-  box.hidden=!text;
-  box.classList.toggle('error',!!error);
- }
- function moveLogoHere(){
+ function attachLogo(){
   const editor=$('shared-logo-editor');
-  if(!logoSlot||!editor)return;
-  logoSlot.append(editor);
-  const heading=$('h-logo')?.querySelector('.step');
-  if(heading)heading.textContent='3';
-  doc.relayoutLogo?.();
-  syncCompanyFields();
+  if(editor&&logoSlot){logoSlot.append(editor);shared.relayoutLogo?.();}
+  syncCompany();
  }
- const statuses={requested:'Richiesto',review:'In verifica',processing:'In elaborazione',sent:'Inviato (non verificato)',completed:'Completato (non verificato)',rejected:'Rifiutato',cancelled:'Annullato'};
- let state={client:'',publicId:'',date:today(),rows:[fresh()]};
- try{let saved=JSON.parse(localStorage.getItem(key)||'null');if(saved&&typeof saved==='object')state={...state,...saved,rows:Array.isArray(saved.rows)?saved.rows.slice(0,40):[fresh()]};}catch(_){}
- if(!state.rows.length)state.rows=[fresh()];
- let timer,last=null,buildId=0,viewId=0;
- const el=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
- const notice=(text,error=false)=>{const p=$('wd-msg');p.textContent=text||'';p.hidden=!text;p.classList.toggle('error',error)};
- function store(){try{localStorage.setItem(key,JSON.stringify(state));}catch(_){notice('Не удалось сохранить черновик в браузере.',true)}}
- const amount=(val,zero=false)=>{let d=num.decimal(val||'0');if(d.units<0n||(!zero&&d.units===0n))throw Error('укажи положительную сумму');return num.money(num.toMoney(d));};
- function check(){
-  const issues=[],rows=[],seen=new Set();
-  if(!state.client.trim())issues.push('Заполни имя клиента.');
-  if(!state.publicId.trim())issues.push('Заполни публичный ID.');
-  if(!num.validDate(state.date))issues.push('Проверь дату выписки.');
-  state.rows.forEach((r,i)=>{
-   const p='Операция '+(i+1)+': ',get=k=>String(r[k]||'').trim();
-   if(!num.validDate(get('date')))issues.push(p+'дата некорректна.');
-   else if(num.validDate(state.date)&&get('date')>state.date)issues.push(p+'дата операции позже выписки.');
-   if(!get('reference'))issues.push(p+'нужен номер заявки.');
-   if(seen.has(get('reference').toLowerCase()))issues.push(p+'номер заявки повторяется.');
-   seen.add(get('reference').toLowerCase());
-   if(!get('beneficiary')||!get('bank'))issues.push(p+'укажи получателя и банк.');
-   const iban=get('iban').replace(/\s+/g,'').toUpperCase(),bic=get('bic').replace(/\s+/g,'').toUpperCase(),currency=get('currency').toUpperCase();
-   if(!/^[A-Z0-9]{4,45}$/.test(iban))issues.push(p+'проверь IBAN или номер банковского счёта.');
-   if(bic&&!/^[A-Z0-9]{8}([A-Z0-9]{3})?$/.test(bic))issues.push(p+'BIC: 8 или 11 символов.');
-   if(!/^[A-Z]{3}$/.test(currency))issues.push(p+'валюта должна состоять из 3 букв.');
-   if(!statuses[get('status')])issues.push(p+'неверный статус.');
-   if(get('status')==='requested'&&get('bankRef'))issues.push(p+'для простой заявки банковский референс должен быть пуст.');
-   let total='—',fee='—';
-   try{total=amount(get('amount'))}catch(e){issues.push(p+'сумма: '+e.message);}
-   try{fee=amount(get('fee')||'0',true)}catch(e){issues.push(p+'комиссия: '+e.message);}
-   rows.push({...r,iban,bic,currency,total,fee});
-  });
-  return {issues,rows};
- }
- function drawRows(){
-  const target=$('wd-rows');target.replaceChildren();
-  state.rows.forEach((r,i)=>{
-   const section=el('section');section.className='wd-row';
-   const head=el('div');head.className='wd-row-head';head.append(el('strong','Вывод '+(i+1)));
-   const remove=el('button','Удалить');remove.className='btn small';remove.type='button';remove.disabled=state.rows.length===1;
-   remove.addEventListener('click',()=>{state.rows.splice(i,1);drawRows();store();schedule()});head.append(remove);section.append(head);
-   const grid=el('div');grid.className='wd-fields';
-   Object.entries(labels).forEach(([name,label])=>{
-    const wrap=el('label',label);wrap.className='f';
-    const inp=el(name==='status'?'select':'input');
-    if(name==='status')Object.entries(statuses).forEach(([value,text])=>{const opt=el('option',text);opt.value=value;inp.append(opt)});
-    else{inp.type=name==='date'?'date':'text';inp.maxLength=name==='details'?200:110;}
-    inp.value=r[name]||'';
-    inp.addEventListener('input',()=>{r[name]=inp.value;store();schedule()});
-    wrap.append(inp);grid.append(wrap);
-   });
-   section.append(grid);target.append(section);
-  });
-  $('wd-count').textContent=String(state.rows.length);
- }
- function renderContent(model){
-  return ({doc:pdf,f,C,MX,RIGHT,PT,FRAME_FIRST,FRAME_NEXT,FRAME_BOTTOM})=>{
-   let y=FRAME_FIRST;const width=RIGHT-MX;
-   const next=()=>{pdf.addPage('a4','landscape');y=FRAME_NEXT};
-   const ensure=h=>{if(y+h>FRAME_BOTTOM)next()};
-   f('InterSB',12,C.BLUE);pdf.text('Prelievi verso conti bancari',MX,y+4);y+=12;
-   f('InterR',8,C.GRAY);
-   for(const line of pdf.splitTextToSize('Riepilogo delle richieste di prelievo basato sui dati indicati. Non costituisce una conferma bancaria di esecuzione, invio o accredito.',width)){ensure(5);pdf.text(line,MX,y+3);y+=5}y+=4;
-   model.rows.forEach((r,i)=>{
-    const rows=[['Data richiesta',r.date.split('-').reverse().join('/')],['Riferimento',r.reference],['Stato',statuses[r.status]],['Beneficiario',r.beneficiary],['Banca beneficiaria',r.bank],['IBAN / Conto',r.iban],['BIC / SWIFT',r.bic||'—'],['Importo richiesto',r.total+' '+r.currency],['Commissione',r.fee+' '+r.currency],['Riferimento bancario',r.bankRef||'Non indicato'],['Descrizione',r.details||'—']];
-    ensure(23);f('InterSB',10,C.BLUE);pdf.text('Prelievo '+(i+1)+' — '+r.reference,MX,y+4);y+=9;
-    pdf.setFillColor(C.HEAD);pdf.rect(MX,y,width,8,'F');f('InterSB',7.5,C.SOFT);
-    pdf.text('CAMPO',MX+4,y+5.5);pdf.text('DETTAGLI',MX+70,y+5.5);y+=8;
-    rows.forEach(([label,value],j)=>{
-     const lines=pdf.splitTextToSize(String(value),width-80),h=Math.max(9,lines.length*4+3);
-     if(y+h>FRAME_BOTTOM){next();f('InterSB',9,C.BLUE);pdf.text('Prelievo '+(i+1)+' (segue)',MX,y+4);y+=9}
-     if(j%2){pdf.setFillColor(C.ALT);pdf.rect(MX,y,width,h,'F')}
-     pdf.setDrawColor(C.LINE);pdf.setLineWidth(.4*PT);pdf.line(MX,y+h,RIGHT,y+h);
-     f('InterR',8,C.GRAY);pdf.text(label,MX+4,y+5);
-     f(j===2?'InterSB':'InterR',8.2,C.BLACK);lines.forEach((line,k)=>pdf.text(line,MX+70,y+5+k*4));y+=h;
-    });y+=8;
-   });
-   ensure(12);f('InterR',7.5,C.GRAY);
-   for(const line of pdf.splitTextToSize('Stati e riferimenti inseriti dall’operatore e non verificati dalla banca. Per la prova del bonifico occorre la documentazione del prestatore di servizi di pagamento.',width)){ensure(4);pdf.text(line,MX,y+3);y+=4}
-  };
- }
- async function preview(bytes,id){
-  if(!window.pdfjsLib)return;
-  const stage=$('wd-stage'),pdf=await pdfjsLib.getDocument({data:new Uint8Array(bytes.slice(0))}).promise;
+ async function drawPreview(bytes,renderId){
+  const stage=$('wd-stage');
+  if(!window.pdfjsLib){stage.textContent='PDF создан. Просмотр недоступен, скачивание работает.';return;}
+  const pdf=await pdfjsLib.getDocument({data:new Uint8Array(bytes.slice(0))}).promise;
   try{
-   const fragment=document.createDocumentFragment(),w=Math.max(320,stage.clientWidth-30),dpr=Math.max(1.5,Math.min(devicePixelRatio||1,2.5));
+   const frag=document.createDocumentFragment();
+   const width=Math.max(300,stage.clientWidth-28),dpr=Math.min(2.2,Math.max(1.3,window.devicePixelRatio||1));
    for(let i=1;i<=pdf.numPages;i++){
-    const p=await pdf.getPage(i),base=p.getViewport({scale:1}),view=p.getViewport({scale:w/base.width*dpr}),canvas=el('canvas');
-    canvas.width=Math.round(view.width);canvas.height=Math.round(view.height);
-    await p.render({canvasContext:canvas.getContext('2d'),viewport:view}).promise;
-    if(id!==viewId)return;
-    fragment.append(canvas,el('div','стр. '+i+' из '+pdf.numPages));
+    const page=await pdf.getPage(i),normal=page.getViewport({scale:1});
+    const vp=page.getViewport({scale:width/normal.width*dpr}),canvas=make('canvas');
+    canvas.width=Math.round(vp.width);canvas.height=Math.round(vp.height);
+    canvas.setAttribute('aria-label','Банковский вывод: страница '+i);
+    await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+    if(renderId!==viewCycle)return;
+    frag.append(canvas);
    }
-   if(id===viewId)stage.replaceChildren(fragment);
-  }finally{await pdf.destroy()}
+   if(renderId===viewCycle)stage.replaceChildren(frag);
+  }finally{await pdf.destroy();}
  }
  async function build(){
-  const id=++buildId,checked=check();
-  if(checked.issues.length){last=null;$('wd-download').disabled=false;$('wd-status').textContent='Нужно исправить данные';notice(checked.issues[0],true);showValidation(checked.issues[0]);return}
-  $('wd-status').textContent='Готовлю PDF…';$('wd-download').disabled=false;notice('');showValidation('');
-  try{
-   const profile=doc.collectProfile();
-   if(!profile.coName||!profile.coAddr?.length)throw Error('В настройках выписок укажи настоящее название и адрес компании.');
-   const data={...profile,mode:'conto',trades:[],clientName:state.client.trim(),clientId:'',publicId:state.publicId.trim(),referenceDate:state.date.split('-').reverse().join('/'),toIso:state.date,accountBalance:'',accountCurrency:'',disclaimer:'Prospetto basato sui dati inseriti. Non costituisce conferma bancaria di bonifico o accredito.'};
-   const pdf=await doc.buildPdf(data,renderContent(checked));
-   if(id!==buildId)return;
-   last={bytes:pdf.bytes,pages:pdf.pages};$('wd-download').disabled=false;
-   $('wd-status').textContent=pdf.pages+' стр. · '+checked.rows.length+' операций';
-   if($('page-withdrawal').classList.contains('active')){
-    try{await preview(pdf.bytes,++viewId);}
-    catch(error){
-     $('wd-status').textContent='PDF готов · предпросмотр недоступен';
-     showValidation('PDF создан и его можно скачать. Ошибка только в предпросмотре: '+(error?.message||'не удалось отобразить страницы'),true);
-    }
-   }
-  }catch(e){if(id!==buildId)return;last=null;$('wd-download').disabled=false;$('wd-status').textContent='PDF недоступен';const why='Не удалось создать PDF: '+(e?.message||'неизвестно');notice(why,true);showValidation(why)}
- }
- function schedule(){last=null;clearTimeout(timer);timer=setTimeout(build,450)}
- for(const [id,key] of [['wd-client','client'],['wd-id','publicId'],['wd-date','date']]){
-  $(id).value=state[key]||'';$(id).addEventListener('input',()=>{state[key]=$(id).value;store();schedule()});
- }
- $('wd-add').addEventListener('click',()=>{if(state.rows.length>=40)return notice('Максимум 40 выводов.',true);state.rows.push(fresh());drawRows();store();schedule()});
- $('wd-copy-client').addEventListener('click',()=>{
-  const p=doc.getState?.()||{};
-  state.client=p.clientName||state.client;state.publicId=p.publicId||p.clientId||state.publicId;
-  $('wd-client').value=state.client;$('wd-id').value=state.publicId;store();schedule()
- });
- $('wd-download').addEventListener('click',async()=>{
-  // Clicking download always attempts an up-to-date build and reports failures visibly.
-  if(!last){
-   clearTimeout(timer);
-   await build();
-   if(!last){$('wd-validation')?.scrollIntoView({block:'center',behavior:'smooth'});return;}
+  const id=++cycle;
+  const valid=values();
+  if(valid.errors.length){
+   last=null;$('wd-status').textContent='Нужно заполнить данные';
+   notice(valid.errors[0],true);return false;
   }
+  notice('');$('wd-status').textContent='Формирую отдельный PDF…';
   try{
-   const blob=new Blob([last.bytes],{type:'application/pdf'}),filename='Prelievi_bancari_'+state.date+'.pdf';
-   if(window.EstrattoDownloads?.save)await window.EstrattoDownloads.save({filename,data:blob});
-   else{const url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),20000)}
-   notice('PDF сохранён. Статусы не являются банковским подтверждением.');
-  }catch(e){notice('Не удалось скачать PDF: '+(e?.message||'ошибка'),true)}
+   const profile=shared.collectProfile();
+   if(!profile.coName)throw Error('Укажи название своей компании в блоке оформления.');
+   if(!renderer?.generate)throw Error('Модуль отдельного PDF не загрузился. Обнови страницу.');
+   const pdf=await renderer.generate({
+    state,entry:valid.transfer,profile,statusLabel:statuses[entry.status],
+    amount:valid.sum,fee:valid.fee
+   });
+   if(id!==cycle)return false;
+   last={bytes:pdf.bytes};
+   $('wd-status').textContent='PDF готов · отдельный банковский вывод';
+   if($('page-withdrawal').classList.contains('active')){
+    try{await drawPreview(pdf.bytes,++viewCycle);}
+    catch(e){notice('PDF готов и скачивается. Ошибка только в предпросмотре: '+(e.message||'неизвестно'),true);}
+   }
+   return true;
+  }catch(error){
+   if(id!==cycle)return false;
+   last=null;$('wd-status').textContent='Ошибка PDF';
+   notice('Не удалось создать PDF: '+(error?.message||'неизвестная ошибка'),true);
+   return false;
+  }
+ }
+ function schedule(){last=null;clearTimeout(timer);timer=setTimeout(build,360);}
+ for(const [id,key] of [['wd-client','client'],['wd-id','publicId']]){
+  const input=$(id);input.value=state[key]||'';
+  input.addEventListener('input',()=>{state[key]=input.value;save();schedule();});
+ }
+ $('wd-download').addEventListener('click',async()=>{
+  if(!last){clearTimeout(timer);await build();}
+  if(!last){$('wd-validation')?.scrollIntoView({block:'center',behavior:'smooth'});return;}
+  try{
+   const file=new Blob([last.bytes],{type:'application/pdf'});
+   const filename='Prelievo_bancario_'+entry.date+'.pdf';
+   if(window.EstrattoDownloads?.save)await window.EstrattoDownloads.save({filename,data:file});
+   else{
+    const url=URL.createObjectURL(file),link=make('a');
+    link.href=url;link.download=filename;document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),20000);
+   }
+   notice('Документ скачан. Это описание вывода, а не банковская квитанция.');
+  }catch(e){notice('Не удалось скачать: '+(e.message||'ошибка'),true);}
  });
- // The legal-entity fields and SVG editor are the same ones used by other statements.
- for(const [key,input] of Object.entries(companyInputs)){
+ for(const [key,input] of Object.entries(companyFields)){
   input?.addEventListener('input',()=>{
-   const original={coName:'co-name',coAddr:'co-addr',coSite:'co-site'}[key];
-   const base=$(original);
-   if(!base||base.value===input.value)return;
-   base.value=input.value;
-   base.dispatchEvent(new Event('input',{bubbles:true}));
+   const original=$( {coName:'co-name',coAddr:'co-addr',coSite:'co-site'}[key]);
+   if(!original||original.value===input.value)return;
+   original.value=input.value;
+   original.dispatchEvent(new Event('input',{bubbles:true}));
   });
  }
  document.addEventListener('estratto:profilechange',()=>{
-  syncCompanyFields();
+  syncCompany();
   if($('page-withdrawal').classList.contains('active'))schedule();
  });
- document.addEventListener('estratto:navigate',e=>{
-  if(e.detail==='withdrawal'){moveLogoHere();schedule();}
+ document.addEventListener('estratto:navigate',event=>{
+  if(event.detail==='withdrawal'){attachLogo();schedule();}
  });
- drawRows();syncCompanyFields();
- if($('page-withdrawal').classList.contains('active')){moveLogoHere();schedule();}
+ fields();syncCompany();
+ if($('page-withdrawal').classList.contains('active')){attachLogo();schedule();}
 })();
