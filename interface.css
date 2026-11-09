@@ -654,3 +654,15 @@ select:focus-visible { outline:2px solid #72756b; outline-offset:3px; }
 #page-mail .mail-signature-logo-size-label{width:100%;display:flex;flex-wrap:wrap;gap:7px;align-items:center;}
 #page-mail .mail-signature-logo-size-label input[type=range]{flex:1 1 160px;min-width:120px;width:auto;}
 #page-mail .mail-signature-logo-size-label output{flex:0 0 auto;min-width:55px;text-align:right;}
+
+/* Independent bank withdrawal report form; existing PDF editors unaffected. */
+#page-withdrawal #wd-rows{display:flex;flex-direction:column;gap:14px;margin:12px 0;}
+#page-withdrawal .wd-row{border:1px solid var(--line);border-radius:14px;background:#fafaf8;padding:14px;}
+#page-withdrawal .wd-row-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+#page-withdrawal .wd-row-head strong{font-size:13px;}
+#page-withdrawal .wd-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+#page-withdrawal .wd-fields .f{min-width:0;}
+#page-withdrawal .wd-fields input,#page-withdrawal .wd-fields select{width:100%;}
+#page-withdrawal .stage canvas{display:block;width:100%;height:auto;}
+#page-withdrawal .stage .pagelabel{font-size:11px;color:var(--muted);text-align:center;margin:9px 0 18px;}
+@media(max-width:700px){#page-withdrawal .wd-fields{grid-template-columns:minmax(0,1fr);}}
