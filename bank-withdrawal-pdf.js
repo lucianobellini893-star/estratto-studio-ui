@@ -101,7 +101,7 @@
   doc.setDrawColor(color.light);doc.line(MX,footerY,RIGHT,footerY);
   font(true,7.7,color.ink);doc.text('Documento informativo',MX,footerY+6);
   font(false,7,color.muted);
-  const warning='Compilato dai dati inseriti. L’avvenuta esecuzione, l’invio o l’accredito del bonifico non sono verificati da questo documento. Per una conferma occorre la documentazione della banca o del prestatore di servizi di pagamento.';
+  const warning='Documento informativo compilato con i dati inseriti dall’operatore. Non sostituisce la ricevuta bancaria né attesta l’accredito.';
   lines(warning,214,false,7).forEach((line,i)=>doc.text(line,MX,footerY+11+i*3.2));
   if(profile.siteCaption){font(false,7,color.muted);doc.text(String(profile.siteCaption).slice(0,55),RIGHT,footerY+11,{align:'right'});}
   const pages=doc.getNumberOfPages();
