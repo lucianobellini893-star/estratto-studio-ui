@@ -181,7 +181,7 @@
   if($('page-transfer').classList.contains('active'))schedule();
  });
  document.addEventListener('estratto:navigate',event=>{
-  if(event.detail==='withdrawal'){attachLogo();schedule();}
+  if(event.detail==='transfer'){attachLogo();schedule();}
  });
  fields();syncCompany();
  if($('page-transfer').classList.contains('active')){attachLogo();schedule();}
