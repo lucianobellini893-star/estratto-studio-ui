@@ -66,7 +66,7 @@
   doc.text('Riepilogo di un prelievo verso conto bancario',MX,y);
   y+=7;font(false,8.5,color.muted);
   doc.text('Dati dichiarati dall’operatore — non è una ricevuta bancaria',MX,y);
-  y+=9;
+  y+=6;
   const items=[
    ['Cliente',state.client],['ID cliente (facoltativo)',state.publicId||'—'],
    ['Data della richiesta',originalDate],['Riferimento della richiesta',entry.reference||'—'],
