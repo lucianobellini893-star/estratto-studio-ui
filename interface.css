@@ -674,3 +674,15 @@ select:focus-visible { outline:2px solid #72756b; outline-offset:3px; }
 #page-withdrawal #withdrawal-logo-slot #logo-tools{min-width:0}
 #page-withdrawal #wd-validation:not([hidden]){display:block;margin:12px 16px;padding:12px 14px;border:1px solid #e9c4ae;border-radius:10px;background:#fff6f0;color:#883522;font-size:12px;line-height:1.55}
 #page-withdrawal #wd-download{cursor:pointer}
+
+/* Receiving-bank transfer form mirrors withdrawal form; shared SVG editor. */
+#page-transfer #bt-rows{display:flex;flex-direction:column;gap:14px;margin:12px 0;}
+#page-transfer .bt-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+#page-transfer .bt-fields .f{min-width:0;}
+#page-transfer .bt-fields input,#page-transfer .bt-fields select{width:100%;}
+#page-transfer #transfer-logo-slot{margin-top:14px;min-width:0;}
+#page-transfer #transfer-logo-slot > #shared-logo-editor{margin:0;padding:0;background:transparent;border:0;box-shadow:none;min-width:0;}
+#page-transfer #transfer-logo-slot #logo-stage{min-height:110px;background:#fff;}
+#page-transfer #bt-validation:not([hidden]){display:block;margin:12px 16px;padding:12px 14px;border:1px solid #e9c4ae;border-radius:10px;background:#fff6f0;color:#883522;font-size:12px;line-height:1.55;}
+#page-transfer .stage canvas{display:block;width:100%;height:auto;}
+@media(max-width:700px){#page-transfer .bt-fields{grid-template-columns:minmax(0,1fr);}}
