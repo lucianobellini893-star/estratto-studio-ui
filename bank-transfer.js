@@ -10,9 +10,12 @@
   const date=new Date();
   return [date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
  };
- const empty=()=>({date:today(),reference:'',beneficiary:'',bank:'',iban:'',bic:'',amount:'',fee:'0',currency:'EUR',status:'requested',bankRef:'',details:''});
+ const empty=()=>({date:today(),reference:'',beneficiary:'',bank:'',iban:'',bic:'',amount:'',fee:'0',currency:'EUR',status:'requested',bankRef:'',details:'',payer:'',payerBank:'',payerIban:'',supportEmail:'',supportPhone:''});
  const statuses={requested:'In attesa di accredito',review:'Trasferimento in verifica',processing:'Trasferimento in elaborazione',sent:'Inviato alla banca',completed:'Accredito confermato',rejected:'Trasferimento respinto',cancelled:'Trasferimento annullato'};
- const labels={date:'Дата перевода / заявки',reference:'Идентификатор перевода (необязательно)',beneficiary:'Получатель средств',bank:'Название банка',iban:'IBAN / номер счёта',bic:'BIC / SWIFT (необязательно)',amount:'Сумма к получению',fee:'Комиссия',currency:'Валюта',status:'Статус поступления средств',bankRef:'Референс / подтверждение банка (при наличии)',details:'Примечание'};
+ const labels={date:'Дата перевода / заявки',reference:'Идентификатор перевода (необязательно)',beneficiary:'Получатель средств',bank:'Название банка',iban:'IBAN / номер счёта',bic:'BIC / SWIFT (необязательно)',amount:'Сумма к получению',fee:'Комиссия',currency:'Валюта',status:'Статус поступления средств',bankRef:'Референс / подтверждение банка (при наличии)',details:'Примечание',
+  payer:'Компания-отправитель (Ordinante)',payerBank:'Банк отправителя (необязательно)',payerIban:'IBAN отправителя (необязательно)',
+  supportEmail:'Почта поддержки (необязательно)',supportPhone:'Телефон поддержки (необязательно)'};
+ const sections={payer:'Отправитель — раздел «Ordinante» в PDF',supportEmail:'Контакты поддержки — блок «Informazioni» в PDF'};
  let state={client:'',publicId:'',rows:[empty()]};
  try{
   const saved=JSON.parse(localStorage.getItem(storageKey)||'null');
@@ -57,6 +60,10 @@
    if(amount.units<0n)throw Error('Комиссия не может быть отрицательной.');
    fee=numbers.money(numbers.toMoney(amount));
   }catch(e){errors.push(e.message);}
+  const payerIban=String(entry.payerIban||'').replace(/\s/g,'').toUpperCase();
+  if(payerIban&&!/^[A-Z0-9]{4,45}$/.test(payerIban))errors.push('IBAN отправителя указан неверно: только латинские буквы и цифры.');
+  const supportEmail=String(entry.supportEmail||'').trim();
+  if(supportEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supportEmail))errors.push('Почта поддержки указана неверно.');
   if(entry.status==='completed'&&!entry.bankRef.trim())errors.push('Для статуса «Accredito confermato» необходим реальный банковский референс, подтверждающий зачисление.');
   return {errors,transfer:{...entry,iban,bic,currency},sum,fee};
  }
@@ -64,6 +71,7 @@
   const root=$('bt-rows');root.replaceChildren();
   const grid=make('div');grid.className='bt-fields';
   for(const [field,label] of Object.entries(labels)){
+   if(sections[field]){const head=make('div',sections[field]);head.className='bt-section';grid.append(head);}
    const holder=make('label',label);holder.className='f';
    const el=make(field==='status'?'select':'input');
    if(field==='status'){
@@ -74,7 +82,10 @@
     el.type=field==='date'?'date':'text';el.autocomplete='off';
     el.maxLength=field==='details'?200:field==='iban'?45:110;
    }
-   if(field==='iban')el.placeholder='IT60 X054 2811 1010 0000 0123 456';
+   if(field==='iban'||field==='payerIban')el.placeholder='IT60 X054 2811 1010 0000 0123 456';
+   if(field==='payer')el.placeholder=(shared.getState?.().coName)||'Название компании из блока оформления';
+   if(field==='supportEmail')el.placeholder='support@вашсайт.com';
+   if(field==='supportPhone')el.placeholder='+352 00 000 000';
    if(field==='reference')el.placeholder='TR-2026-0001';
    el.value=entry[field]||'';
    el.addEventListener('input',()=>{
