@@ -120,9 +120,9 @@
         </div>
         <div class="row">
           <label class="f" for="p-from">Период с
-            <input type="date" id="p-from"></label>
+            <input type="text" id="p-from" class="mono" inputmode="numeric" placeholder="дд/мм/гггг" maxlength="10" autocomplete="off"></label>
           <label class="f" for="p-to">по
-            <input type="date" id="p-to"></label>
+            <input type="text" id="p-to" class="mono" inputmode="numeric" placeholder="дд/мм/гггг" maxlength="10" autocomplete="off"></label>
         </div>
         <p class="hint" id="per-hint"></p>
       </section>
@@ -1254,22 +1254,31 @@ function effectivePeriod() {
   if (S.periodAuto) { const p = autoPeriod(); if (p) return p; }
   return { from: S.from, to: S.to };
 }
+// New or changed trades always bring the period back to "from first opening to last closing";
+// a date typed by hand stays only until the trades change.
+function tradesSignature(text) {
+  let h = 0; const t = String(text || "");
+  for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0;
+  return t.length + ":" + h;
+}
 function applyPeriodUI() {
+  const sig = tradesSignature(S.trades);
+  if (S.periodTradesSig !== sig) { S.periodTradesSig = sig; if (!S.periodAuto) { S.periodAuto = true; persist(); } }
   $("per-auto").setAttribute("aria-pressed", !!S.periodAuto);
   $("per-manual").setAttribute("aria-pressed", !S.periodAuto);
   const hint = $("per-hint");
   if (S.periodAuto) {
     const p = autoPeriod();
     if (p) {
-      el.from.value = p.from; el.to.value = p.to;
-      hint.textContent = "Даты берутся из сделок этой выписки: с самой ранней даты открытия по самую позднюю дату сделки. Если поменять дату вручную, период перестанет подбираться сам.";
+      setDateField(el.from, p.from); setDateField(el.to, p.to);
+      hint.textContent = "Даты берутся из сделок этой выписки: с самой ранней даты открытия по самую позднюю дату закрытия. Можно поправить вручную — при вставке новых сделок период снова подберётся сам.";
     } else {
-      el.from.value = S.from || ""; el.to.value = S.to || "";
+      setDateField(el.from, S.from); setDateField(el.to, S.to);
       hint.textContent = "Сделок пока нет, поэтому стоят последние введённые даты. Как только вставите сделки, период подберётся сам.";
     }
   } else {
-    el.from.value = S.from || ""; el.to.value = S.to || "";
-    hint.textContent = "Период задан вручную и не меняется при вставке сделок.";
+    setDateField(el.from, S.from); setDateField(el.to, S.to);
+    hint.textContent = "Период задан вручную для этих сделок. При вставке или импорте новых сделок он снова подберётся по датам открытия и закрытия.";
   }
 }
 $("per-auto").addEventListener("click", () => { S.periodAuto = true; persist(); onChange(); });
@@ -1277,12 +1286,41 @@ $("per-manual").addEventListener("click", () => {
   const p = effectivePeriod(); S.from = p.from; S.to = p.to;
   S.periodAuto = false; persist(); onChange(); el.from.focus();
 });
-["from", "to"].forEach((k) => el[k].addEventListener("input", () => {
-  const p = effectivePeriod();
-  S.from = k === "from" ? el.from.value : p.from;
-  S.to = k === "to" ? el.to.value : p.to;
-  S.periodAuto = false; persist(); onChange();
-}));
+// Period fields use the same dd/mm/yyyy format as the PDF; inside we keep yyyy-mm-dd.
+function parseItDate(v) {
+  const m = String(v).trim().match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2}|\d{4})$/);
+  if (!m) return null;
+  let [, d, mo, y] = m; if (y.length === 2) y = "20" + y;
+  const dt = new Date(Date.UTC(+y, +mo - 1, +d));
+  if (dt.getUTCFullYear() !== +y || dt.getUTCMonth() !== +mo - 1 || dt.getUTCDate() !== +d) return null;
+  return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+function setDateField(input, iso) {
+  if (document.activeElement === input) return;
+  input.value = iso ? isoToIt(iso) : "";
+  input.classList.remove("bad");
+}
+["from", "to"].forEach((k) => {
+  el[k].addEventListener("keydown", (e) => { el[k]._back = e.key === "Backspace"; });
+  el[k].addEventListener("input", () => {
+    let v = el[k].value.replace(/[^\d/.\-]/g, "");
+    if (!el[k]._back && (/^\d{2}$/.test(v) || /^\d{2}[/.\-]\d{2}$/.test(v))) v += "/";
+    el[k].value = v.replace(/[.\-]/g, "/");
+    const iso = parseItDate(el[k].value);
+    el[k].classList.toggle("bad", el[k].value.length >= 8 && !iso);
+    if (!iso) return;
+    const p = effectivePeriod();
+    S.from = k === "from" ? iso : p.from;
+    S.to = k === "to" ? iso : p.to;
+    S.periodAuto = false; persist(); onChange();
+  });
+  el[k].addEventListener("blur", () => {
+    const iso = parseItDate(el[k].value);
+    if (iso) { el[k].value = isoToIt(iso); el[k].classList.remove("bad"); }
+    else if (el[k].value) el[k].classList.add("bad");
+    else setDateField(el[k], k === "from" ? effectivePeriod().from : effectivePeriod().to);
+  });
+});
 
 /* logo: interactive recolouring */
 const BRAND_BLUE = "#1F4FD1", LOGO_BLACK = "#0B0D12";
