@@ -688,3 +688,5 @@ select:focus-visible { outline:2px solid #72756b; outline-offset:3px; }
 @media(max-width:700px){#page-transfer .bt-fields{grid-template-columns:minmax(0,1fr);}}
 
 .bt-section{grid-column:1/-1;margin-top:10px;padding-top:12px;border-top:1px solid var(--line, #E6E8EE);font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--muted, #6B7280);}
+
+input.bad{border-color:#D8323C!important;background:#FCECEE!important;}
