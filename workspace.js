@@ -128,16 +128,30 @@
   if(!core.types.includes(type))return false;
   const snapshot=clone(data||current(type));const next=clone(library);
   if(next.history.length>=1000){notice('История заполнена (1000 записей). Экспорт выполнен, но запись не сохранена. Удалите ненужные записи.',true);return false;}
-  next.history.push({id:id(),type,action,name:(snapshot.clientName||snapshot.title||names[type]).slice(0,200),createdAt:new Date().toISOString(),data:snapshot,profile:type==='mail'?undefined:savedProfile|| (type==='editor'?Object.fromEntries(profileKeys.filter(key=>key in snapshot).map(key=>[key,snapshot[key]])):profile())});
-  if(write(next)){renderHistory();return true;}return false;
+  const rowId=id();next.history.push({id:rowId,type,action,name:(snapshot.clientName||snapshot.title||names[type]).slice(0,200),createdAt:new Date().toISOString(),data:snapshot,profile:type==='mail'?undefined:savedProfile|| (type==='editor'?Object.fromEntries(profileKeys.filter(key=>key in snapshot).map(key=>[key,snapshot[key]])):profile())});
+  if(write(next)){renderHistory();return rowId;}return false;
  };
+ let archiveRows=[];
+ const fileNames={editor:'Выписка по сделкам',account:'Выписка по счёту',withdrawal:'Вывод на банковский счёт',transfer:'Получение средств',contracts:'Договор',mail:'Письмо'};
+ function refreshArchive(){if(!window.EstrattoArchive)return;window.EstrattoArchive.list().then(rows=>{archiveRows=rows;renderHistory();}).catch(()=>{});}
+ document.addEventListener('estratto:archive',refreshArchive);
+ function pdfButton(fileId){return button('Скачать PDF',()=>window.EstrattoArchive.download(fileId).catch(error=>notice(error.message,true)),'primary');}
  function renderHistory(){
-  const list=$('history-list'),query=$('history-search').value.trim().toLocaleLowerCase(),filter=$('history-filter').value;list.replaceChildren();$('history-total').textContent=library.history.length;
-  const rows=library.history.filter(row=>(!filter||row.type===filter)&&[row.name,row.data.publicId,row.data.clientId,row.action,stamp(row.createdAt)].some(value=>String(value||'').toLocaleLowerCase().includes(query))).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
-  if(!rows.length){const box=document.createElement('div');box.className='library-empty';box.append(symbol('editor'),text('h3',query||filter?'Ничего не найдено':'Здесь появится история'),text('p',query||filter?'Попробуйте другой запрос.':'Скачайте PDF или экспортируйте письмо — запись появится здесь автоматически.'));list.append(box);}
-  for(const row of rows){const card=document.createElement('article');card.className='card library-item history-item';const actions=document.createElement('div');actions.className='library-actions';actions.append(button('Открыть копию',()=>switchTo(row.type,row.data,row.profile)),moreMenu([button('Удалить',()=>removeRecord('history',row.id),'library-delete')]));card.append(identity(row.name,names[row.type]+' · '+row.action,symbol(row.type)),text('time',stamp(row.createdAt),'library-date'),actions);list.append(card);}
+  const list=$('history-list'),query=$('history-search').value.trim().toLocaleLowerCase(),filter=$('history-filter').value;list.replaceChildren();
+  const linked=new Map(archiveRows.filter(row=>row.historyId).map(row=>[row.historyId,row]));
+  const files=archiveRows.filter(row=>!row.historyId||!library.history.some(h=>h.id===row.historyId));
+  $('history-total').textContent=library.history.length+files.length;
+  const items=[...library.history.map(row=>({kind:'history',row,at:row.createdAt,type:row.type,search:[row.name,row.data.publicId,row.data.clientId,row.action,stamp(row.createdAt)]})),...files.map(row=>({kind:'file',row,at:row.createdAt,type:row.type,search:[row.name,row.client,row.publicId,row.filename,row.note,stamp(row.createdAt)]}))];
+  const rows=items.filter(item=>(!filter||item.type===filter)&&item.search.some(value=>String(value||'').toLocaleLowerCase().includes(query))).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  if(!rows.length){const box=document.createElement('div');box.className='library-empty';box.append(symbol('editor'),text('h3',query||filter?'Ничего не найдено':'Здесь появится история'),text('p',query||filter?'Попробуйте другой запрос.':'Скачайте PDF или экспортируйте письмо — запись и сам файл сохранятся здесь автоматически.'));list.append(box);}
+  for(const item of rows){
+   const card=document.createElement('article');card.className='card library-item history-item';const actions=document.createElement('div');actions.className='library-actions';
+   if(item.kind==='history'){const row=item.row,file=linked.get(row.id);if(file)actions.append(pdfButton(file.id));actions.append(button('Открыть копию',()=>switchTo(row.type,row.data,row.profile)),moreMenu([button('Удалить запись',()=>removeRecord('history',row.id),'library-delete')]));card.append(identity(row.name,names[row.type]+' · '+row.action,symbol(row.type)),text('time',stamp(row.createdAt),'library-date'),actions);}
+   else{const row=item.row;actions.append(pdfButton(row.id),moreMenu([button('Открыть в браузере',()=>window.EstrattoArchive.preview(row.id).catch(error=>notice(error.message,true))),button('Удалить',()=>{if(confirm('Удалить этот PDF из архива?'))window.EstrattoArchive.remove(row.id).catch(error=>notice(error.message,true));},'library-delete')]));card.append(identity(row.name,(fileNames[row.type]||'Документ')+' · PDF скачан'+(row.note?' · '+row.note:''),symbol(row.type)),text('time',stamp(row.createdAt),'library-date'),actions);}
+   list.append(card);
+  }
  }
- $('history-search').addEventListener('input',renderHistory);$('history-filter').addEventListener('change',renderHistory);
+ $('history-search').addEventListener('input',renderHistory);$('history-filter').addEventListener('change',renderHistory);refreshArchive();
  let editingTemplate=null,templateSource=null,usingTemplate=null;
  function resetTemplate(){editingTemplate=null;templateSource=null;$('template-form').reset();$('template-form-title').textContent='Новый шаблон';$('template-cancel').hidden=true;}
  $('template-cancel').addEventListener('click',resetTemplate);

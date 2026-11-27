@@ -304,7 +304,7 @@
     status('Совпадений не найдено: PDF не был экспортирован. Проверь написание старых реквизитов (в PDF они могут быть разбиты на строки или отдельные фрагменты).',true);
     return;
    }
-   result.pdf.save('layout_review_'+safeFilename(TYPES[active].name)+'.pdf');
+   result.pdf.save('layout_review_'+safeFilename(TYPES[active].name)+'.pdf');try{window.EstrattoArchive?.add({type:'contracts',name:TYPES[active].name,filename:'layout_review_'+safeFilename(TYPES[active].name)+'.pdf',blob:result.pdf.output('blob'),note:'Договор по исходному PDF'});}catch(_){}
    const missing=rules.filter(rule=>!result.coverage[rule.key]).map(rule=>rule.old);
    let note='PDF с исходным дизайном создан: '+result.pages+' стр.; замен найдено: '+matches+'.';
    if(missing.length)note+=' Не найдены: '+missing.join('; ')+'.';
@@ -355,7 +355,7 @@
     pdf.text(line,margin,y);y+=4.7;
    }
   }
-  pdf.save('legal_review_'+safeFilename(TYPES[active].name)+'.pdf');
+  pdf.save('legal_review_'+safeFilename(TYPES[active].name)+'.pdf');try{window.EstrattoArchive?.add({type:'contracts',name:TYPES[active].name,filename:'legal_review_'+safeFilename(TYPES[active].name)+'.pdf',blob:pdf.output('blob'),note:'Договор по исходному PDF'});}catch(_){}
   doc.edited=working;
   pagesPreview(doc);
   status('Рабочий PDF с изменённым текстом создан. Реквизиты автоматически подставлены. Вёрстка отличается от оригинала; исходник сохранён без изменений.');

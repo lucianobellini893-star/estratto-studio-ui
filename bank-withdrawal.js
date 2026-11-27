@@ -165,6 +165,7 @@
     link.href=url;link.download=filename;document.body.append(link);link.click();link.remove();
     setTimeout(()=>URL.revokeObjectURL(url),20000);
    }
+   window.EstrattoArchive?.add({type:'withdrawal',name:state.client||'Вывод на банковский счёт',client:state.client,publicId:state.publicId,filename,blob:file,note:entry.amount?String(entry.amount)+' '+String(entry.currency||''):''});
    notice('Документ скачан. Это описание вывода, а не банковская квитанция.');
   }catch(e){notice('Не удалось скачать: '+(e.message||'ошибка'),true);}
  });

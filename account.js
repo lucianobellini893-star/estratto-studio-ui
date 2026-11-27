@@ -302,6 +302,7 @@
       link.href=url;link.download=`estratto_conto_${slug}_${(lastPdf.model.date||'').replace(/-/g,'')}.pdf`;
       document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
       const historySaved=window.EstrattoRecordExport?.('account','PDF скачан',historySnapshot,Object.fromEntries(['coName','coAddr','coSite','discA','discC','logoSvg','logoFills','logoParts','logoLayout','logoGap'].filter(key=>key in historyProfile).map(key=>[key,historyProfile[key]])));
+      window.EstrattoArchive?.add({type:'account',name:historySnapshot.clientName||'Выписка по счёту',client:historySnapshot.clientName,publicId:lastPdf.model.publicId,filename:link.download,blob:new Blob([lastPdf.bytes],{type:'application/pdf'}),historyId:historySaved,note:'Conto di trading'});
       $('ac-download-message').textContent=historySaved?'PDF скачан и добавлен в историю.':'PDF скачан, но запись в историю не сохранена. Обновите страницу и проверьте доступность хранилища браузера.';$('ac-download-message').hidden=false;
     } finally { $('ac-download').disabled=false; }
   });

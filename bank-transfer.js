@@ -176,6 +176,7 @@
     link.href=url;link.download=filename;document.body.append(link);link.click();link.remove();
     setTimeout(()=>URL.revokeObjectURL(url),20000);
    }
+   window.EstrattoArchive?.add({type:'transfer',name:state.client||'Получение средств',client:state.client,publicId:state.publicId,filename,blob:file,note:entry.amount?String(entry.amount)+' '+String(entry.currency||''):''});
    notice('Документ скачан. Документ составлен по введённым данным. Он не заменяет подтверждение банка.');
   }catch(e){notice('Не удалось скачать: '+(e.message||'ошибка'),true);}
  });

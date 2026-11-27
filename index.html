@@ -65,7 +65,7 @@
     <div class="dash-filters" role="search">
      <strong>Фильтры</strong>
      <label class="pill-field"><span class="sr-only">Клиент</span><select id="df-client"><option value="">Все клиенты</option></select></label>
-     <label class="pill-field"><span class="sr-only">Тип документа</span><select id="df-type"><option value="">Тип документа</option><option value="editor">Выписка по сделкам</option><option value="account">Выписка по счёту</option><option value="mail">Письмо</option></select></label>
+     <label class="pill-field"><span class="sr-only">Тип документа</span><select id="df-type"><option value="">Тип документа</option><option value="editor">Выписка по сделкам</option><option value="account">Выписка по счёту</option><option value="withdrawal">Вывод на банк. счёт</option><option value="transfer">Получение средств</option><option value="contracts">Договор</option><option value="mail">Письмо</option></select></label>
      <label class="pill-field date"><span class="sr-only">С даты</span><input type="text" id="df-from" inputmode="numeric" maxlength="10" placeholder="с дд/мм/гггг"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></label>
      <label class="pill-field date"><span class="sr-only">По дату</span><input type="text" id="df-to" inputmode="numeric" maxlength="10" placeholder="по дд/мм/гггг"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></label>
      <div class="pill-seg" id="df-kind" role="group" aria-label="Источник"><button type="button" data-kind="" aria-pressed="true">Все</button><button type="button" data-kind="history" aria-pressed="false">Созданные</button><button type="button" data-kind="drafts" aria-pressed="false">Черновики</button></div>
@@ -547,7 +547,7 @@
     <div class="editor-heading"><div><div class="eyebrow">ДОКУМЕНТЫ / ЛОКАЛЬНО</div><h1>Черновики</h1><p>Выписки и письма, сохранённые в этом браузере.</p></div></div>
     <div class="library-panel">
      <div class="library-panel-top"><div><h2>Все черновики <span class="count" id="draft-total">0</span></h2><p>Продолжите с того места, где остановились.</p></div><span class="library-local"><i></i> Сохранено на устройстве</span></div>
-     <div class="library-filters"><label class="library-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="draft-search" type="search" placeholder="Поиск по названию или клиенту" aria-label="Поиск черновика"></label><select id="draft-filter" aria-label="Тип черновика"><option value="">Все документы</option><option value="editor">Выписки по сделкам</option><option value="account">Выписки по счёту</option><option value="mail">Письма</option></select></div>
+     <div class="library-filters"><label class="library-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="draft-search" type="search" placeholder="Поиск по названию или клиенту" aria-label="Поиск черновика"></label><select id="draft-filter" aria-label="Тип черновика"><option value="">Все документы</option><option value="editor">Выписки по сделкам</option><option value="account">Выписки по счёту</option><option value="withdrawal">Вывод на банк. счёт</option><option value="transfer">Получение средств</option><option value="contracts">Договоры</option><option value="mail">Письма</option></select></div>
      <div class="library-list-labels"><span>ДОКУМЕНТ</span><span>ОБНОВЛЕНО</span><span></span></div><div id="draft-list" class="library-list"></div>
     </div>
    </section>
@@ -1767,6 +1767,7 @@ $("download").addEventListener("click", async () => {
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
     const historySaved=window.EstrattoRecordExport?.('editor','PDF скачан',JSON.parse(JSON.stringify(S)));
+    window.EstrattoArchive?.add({type:"editor",name:(S.clientName||"Выписка по сделкам"),client:S.clientName,publicId:S.clientId,filename:fileName(lastPdf.data),blob:new Blob([lastPdf.bytes],{type:"application/pdf"}),historyId:historySaved,note:S.mode==="chiuse"?"Закрытые сделки":"Открытые сделки"});
     showMsg("dl-msg",historySaved?"PDF скачан и добавлен в историю.":"PDF скачан, но история не сохранена. Обновите страницу и проверьте хранилище браузера.",!historySaved);
     return;
   }
@@ -1774,6 +1775,7 @@ $("download").addEventListener("click", async () => {
     const historySnapshot=JSON.parse(JSON.stringify(S));
     await downloads.save({ filename: fileName(lastPdf.data), data: new Blob([lastPdf.bytes], { type: "application/pdf" }) });
     const historySaved=window.EstrattoRecordExport?.('editor','PDF скачан',historySnapshot);
+    window.EstrattoArchive?.add({type:"editor",name:(S.clientName||"Выписка по сделкам"),client:S.clientName,publicId:S.clientId,filename:fileName(lastPdf.data),blob:new Blob([lastPdf.bytes],{type:"application/pdf"}),historyId:historySaved,note:S.mode==="chiuse"?"Закрытые сделки":"Открытые сделки"});
     showMsg("dl-msg",historySaved?"PDF сохранён и добавлен в историю.":"PDF сохранён, но запись в историю не сохранена. Проверьте хранилище браузера.",!historySaved);
   } catch (err) {
     const code = err && err.code;
@@ -1840,22 +1842,23 @@ renderLogoParts();
 <script src="account-picker.js?v=20261029-account-scope"></script>
 <script src="account-deposits.js?v=20261029-account-scope"></script>
 <script src="account-numbers.js?v=20261029-account-scope"></script>
-<script src="account.js?v=20261109-sharedlogo-fix"></script>
+<script src="account.js?v=20261127-archive1"></script>
 <script src="account-import.js?v=20261103-auto-import"></script>
 <script src="mail-core.js?v=20261105-joined-card"></script>
 <script src="mail.js?v=20261104-logo-centered"></script>
 <script src="workspace-core.js?v=20261029-account-scope"></script>
-<script src="workspace.js?v=20261127-blue1"></script>
-<script src="dashboard.js?v=20261127-blue1"></script>
+<script src="archive.js?v=20261127-archive1"></script>
+<script src="workspace.js?v=20261127-archive1"></script>
+<script src="dashboard.js?v=20261127-archive1"></script>
 <script src="bank-withdrawal-pdf.js?v=20261109-footer-clean2"></script>
-<script src="bank-withdrawal.js?v=20261109-status-clean"></script>
+<script src="bank-withdrawal.js?v=20261127-archive1"></script>
 <script src="bank-transfer-pdf.js?v=20261109-transfer1"></script>
-<script src="bank-transfer.js?v=20261109-transfer1"></script>
+<script src="bank-transfer.js?v=20261127-archive1"></script>
 <script src="contracts-expanded.js?v=20261104-expanded1"></script>
 <script src="contracts-clauses.js?v=20261104-longform1"></script>
 <script src="contracts-core.js?v=20261104-longform1"></script>
-<script src="contracts.js?v=20261104-lines3"></script>
+<script src="contracts.js?v=20261127-archive1"></script>
 <script src="contracts-source-layout.js?v=20261104-lines3"></script>
-<script src="contracts-source.js?v=20261104-lines3"></script>
+<script src="contracts-source.js?v=20261127-archive1"></script>
 </body>
 </html>

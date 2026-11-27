@@ -119,9 +119,10 @@ input[type=text]:focus, input[type=date]:focus, input[type=url]:focus, input[typ
 .round-btn { display: grid; place-items: center; width: 36px; height: 36px; flex: none; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: #fff; color: var(--ink-2); }
 .round-btn svg { width: 16px; height: 16px; }
 .round-btn:hover { border-color: var(--blue); color: var(--blue); }
-.act-bars { display: flex; align-items: stretch; gap: 8px; flex: 1; min-height: 110px; margin-top: 16px; }
-.act-col { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; }
-.act-bar { position: relative; width: 100%; border-radius: 10px; background: #eef0f3; }
+.act-bars { display: flex; gap: 8px; height: 130px; margin-top: auto; padding-top: 22px; }
+.act-col { display: flex; flex: 1; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.act-track { position: relative; flex: 1; width: 100%; }
+.act-bar { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 10px; background: #eef0f3; }
 .act-bar.today { background: var(--blue); }
 .act-tip { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); padding: 3px 8px; border-radius: 7px; background: #0b0d12; color: #fff; font-size: 10.5px; white-space: nowrap; }
 .act-day { color: var(--muted); font-size: 10.5px; }

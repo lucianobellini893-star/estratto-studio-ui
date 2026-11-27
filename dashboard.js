@@ -3,8 +3,9 @@
  'use strict';
  const $ = id => document.getElementById(id);
  if (!$('page-overview') || !$('dl-rows')) return;
- const names = { editor: 'Выписка по сделкам', account: 'Выписка по счёту', mail: 'Письмо' };
- const typePage = { editor: 'editor', account: 'account', mail: 'mail' };
+ const names = { editor: 'Выписка по сделкам', account: 'Выписка по счёту', mail: 'Письмо', withdrawal: 'Вывод на банк. счёт', transfer: 'Получение средств', contracts: 'Договор' };
+ const typePage = { editor: 'editor', account: 'account', mail: 'mail', withdrawal: 'withdrawal', transfer: 'transfer', contracts: 'contracts' };
+ let files = [];
  const tones = ['#F4D3C6', '#C9DBF8', '#DCD0F5', '#F6E3B0', '#CDEBD8', '#F5CADB'];
  const filters = { client: '', type: '', from: '', to: '', kind: '', q: '' };
  let selected = '';
@@ -24,8 +25,9 @@
  }
  function clientOf(row) { return String(row.data?.clientName || '').trim(); }
  function rowsFrom(lib) {
-  const out = [];
-  for (const r of lib.history || []) out.push({ key: 'h:' + r.id, kind: 'history', id: r.id, type: r.type, name: r.name || names[r.type], client: clientOf(r), action: r.action || 'Создан', at: new Date(r.createdAt), data: r.data || {} });
+  const out = [], linked = new Map(files.filter(f => f.historyId).map(f => [f.historyId, f])), ids = new Set((lib.history || []).map(h => h.id));
+  for (const r of lib.history || []) out.push({ key: 'h:' + r.id, kind: 'history', id: r.id, type: r.type, name: r.name || names[r.type], client: clientOf(r), action: r.action || 'Создан', at: new Date(r.createdAt), data: r.data || {}, file: linked.get(r.id) || null });
+  for (const f of files) if (!f.historyId || !ids.has(f.historyId)) out.push({ key: 'f:' + f.id, kind: 'files', id: f.id, type: f.type, name: f.name || names[f.type] || 'Документ', client: f.client || '', action: 'PDF скачан', at: new Date(f.createdAt), data: { publicId: f.publicId }, file: f });
   for (const r of lib.drafts || []) out.push({ key: 'd:' + r.id, kind: 'drafts', id: r.id, type: r.type, name: r.name || names[r.type], client: clientOf(r), action: 'Черновик', at: new Date(r.updatedAt || r.createdAt), data: r.data || {} });
   return out.filter(r => names[r.type]).sort((a, b) => (b.at.getTime() || 0) - (a.at.getTime() || 0));
  }
@@ -39,7 +41,7 @@
 
  function renderKpis(lib, rows) {
   const now = new Date(), m0 = new Date(now.getFullYear(), now.getMonth(), 1), p0 = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const hist = rows.filter(r => r.kind === 'history');
+  const hist = rows.filter(r => r.kind !== 'drafts');
   const month = hist.filter(r => r.at >= m0), prev = hist.filter(r => r.at >= p0 && r.at < m0);
   $('kpi-month').textContent = month.length;
   const delta = $('kpi-month-delta');
@@ -77,20 +79,21 @@
   const max = Math.max(1, ...days.map(d => d.n)), total = days.reduce((s, d) => s + d.n, 0);
   $('act-total').textContent = total;
   for (const [i, day] of days.entries()) {
-   const col = el('div', 'act-col'), b = el('div', 'act-bar' + (i === 6 ? ' today' : ''));
-   b.style.height = day.n ? Math.max(18, Math.round(day.n / max * 100)) : 8 + '%';
+   const col = el('div', 'act-col'), b = el('div', 'act-bar' + (i === 6 && day.n ? ' today' : ''));
+   b.style.height = (day.n ? Math.max(18, Math.round(day.n / max * 100)) : 6) + '%';
    b.title = fmtDate(day.d) + ': ' + day.n;
    if (i === 6 && day.n) b.append(el('span', 'act-tip', day.n + ' сегодня'));
-   col.append(b, el('span', 'act-day', labels[day.d.getDay()]));
+   const track = el('div', 'act-track'); track.append(b);
+   col.append(track, el('span', 'act-day', labels[day.d.getDay()]));
    host.append(col);
   }
  }
 
  function filtered(rows) {
   const from = parseIt(filters.from), to = parseIt(filters.to), q = filters.q.toLocaleLowerCase();
-  return rows.filter(r => (!filters.client || r.client === filters.client) && (!filters.type || r.type === filters.type) && (!filters.kind || r.kind === filters.kind) &&
+  return rows.filter(r => (!filters.client || r.client === filters.client) && (!filters.type || r.type === filters.type) && (!filters.kind || r.kind === filters.kind || (filters.kind === 'history' && r.kind === 'files')) &&
    (!from || r.at >= from) && (!to || r.at < new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1)) &&
-   (!q || [r.name, r.client, names[r.type], r.action, r.data.publicId, r.data.clientId, r.data.title].some(v => String(v || '').toLocaleLowerCase().includes(q))));
+   (!q || [r.name, r.client, names[r.type], r.action, r.data.publicId, r.data.clientId, r.data.title, r.file && r.file.filename, r.file && r.file.note].some(v => String(v || '').toLocaleLowerCase().includes(q))));
  }
 
  function status(r) { return r.kind === 'drafts' ? ['Черновик', 'st-draft'] : /скоп|скач|html|eml/i.test(r.action) && r.type === 'mail' ? ['Отправка', 'st-sent'] : ['Готов', 'st-ready']; }
@@ -117,6 +120,7 @@
   renderDetail(list.find(r => r.key === selected));
  }
 
+ const kb = n => !n ? '—' : n < 1048576 ? Math.max(1, Math.round(n / 1024)) + ' КБ' : (n / 1048576).toFixed(1).replace('.', ',') + ' МБ';
  function mini(label, value, sub) { const m = el('div', 'mini'); m.append(el('span', 'mini-l', label), el('strong', '', value || '—'), el('small', '', sub || '')); return m; }
 
  function renderDetail(r) {
@@ -125,13 +129,15 @@
   const main = el('div', 'dd-main');
   const head = el('div', 'dd-head');
   const c1 = el('div'); c1.append(el('span', 'mini-l', r.kind === 'drafts' ? 'Черновик' : 'Документ'), el('div', 'dd-title', r.name)); const [st, cls] = status(r); c1.append(el('span', 'st ' + cls, r.kind === 'drafts' ? st : r.action));
-  const c2 = el('div'); c2.append(el('span', 'mini-l', 'Тип'), el('strong', '', names[r.type]), el('small', '', r.type === 'editor' ? (r.data.mode === 'chiuse' || r.data.mode === 'closed' ? 'Закрытые сделки' : 'Сделки · PDF') : r.type === 'account' ? 'Conto di trading · PDF' : 'Email · HTML'));
+  const c2 = el('div'); c2.append(el('span', 'mini-l', 'Тип'), el('strong', '', names[r.type] || 'Документ'), el('small', '', r.file && r.file.note ? r.file.note : r.type === 'editor' ? (r.data.mode === 'chiuse' ? 'Закрытые сделки' : 'Открытые сделки') : r.type === 'account' ? 'Conto di trading · PDF' : r.type === 'mail' ? 'Email · HTML' : 'PDF'));
   const c3 = el('div', 'dd-client'); c3.append(el('span', 'mini-l', 'Клиент'));
   const who = el('div', 'dd-who'); const t = el('div'); t.append(el('strong', '', r.client || '—'), el('small', '', r.data.publicId || r.data.clientId || '')); who.append(avatar(r.client || r.name, 32), t); c3.append(who);
   head.append(c1, c2, c3);
   const minis = el('div', 'dd-minis');
   const when = isFinite(r.at) ? fmtDate(r.at) : '—', time = isFinite(r.at) ? fmtTime(r.at) : '';
-  if (r.type === 'editor') {
+  if (r.kind === 'files') {
+   minis.append(mini('Файл', r.file.filename, 'PDF'), mini('Размер', kb(r.file.size), 'сохранён в архиве'), mini('Скачан', when, time));
+  } else if (r.type === 'editor') {
    const lines = String(r.data.trades || '').split(/\n/).filter(l => l.trim()).length;
    minis.append(mini('Период', r.data.from && r.data.to ? r.data.from.split('-').reverse().join('/') : 'Авто', r.data.to ? 'по ' + r.data.to.split('-').reverse().join('/') : 'по датам сделок'), mini('Сделок', String(lines), 'строк из CRM'), mini(r.kind === 'drafts' ? 'Обновлён' : 'Создан', when, time));
   } else if (r.type === 'account') {
@@ -140,14 +146,23 @@
    minis.append(mini('Тема', r.data.title || '—', ''), mini('Действие', r.action, ''), mini(r.kind === 'drafts' ? 'Обновлён' : 'Создан', when, time));
   }
   const foot = el('div', 'dd-foot');
-  foot.append(el('span', 'dd-foot-l', r.kind === 'drafts' ? 'Продолжить с того же места' : 'Открыть копию с теми же данными'));
+  foot.append(el('span', 'dd-foot-l', r.file ? 'PDF сохранён на этом устройстве' : r.kind === 'drafts' ? 'Продолжить с того же места' : 'Открыть копию с теми же данными'));
+  const btns = el('div', 'dd-btns');
   const go = el('button', 'pill-btn ghost', 'Раздел'); go.type = 'button'; go.addEventListener('click', () => window.EstrattoNavigate(typePage[r.type]));
-  const open = el('button', 'pill-btn blue', r.kind === 'drafts' ? 'Продолжить' : 'Открыть копию'); open.type = 'button';
-  open.addEventListener('click', () => window.EstrattoLibraryView && window.EstrattoLibraryView.open(r.kind, r.id));
-  const btns = el('div', 'dd-btns'); btns.append(go, open); foot.append(btns);
+  if (r.kind !== 'files') {
+   const open = el('button', 'pill-btn ' + (r.file ? 'ghost' : 'blue'), r.kind === 'drafts' ? 'Продолжить' : 'Открыть копию'); open.type = 'button';
+   open.addEventListener('click', () => window.EstrattoLibraryView && window.EstrattoLibraryView.open(r.kind, r.id));
+   btns.append(r.file ? open : go, ...(r.file ? [] : [open]));
+  } else btns.append(go);
+  if (r.file) {
+   const dl = el('button', 'pill-btn blue', 'Скачать PDF'); dl.type = 'button';
+   dl.addEventListener('click', () => window.EstrattoArchive.download(r.file.id).catch(e => alert(e.message)));
+   btns.append(dl);
+  }
+  foot.append(btns);
   main.append(head, minis, foot);
   const paper = el('div', 'dd-paper'); paper.setAttribute('aria-hidden', 'true');
-  paper.append(el('i', 'pp-logo'), el('b', '', r.type === 'mail' ? 'Messaggio' : r.type === 'account' ? 'Estratto conto' : 'Operazioni'));
+  paper.append(el('i', 'pp-logo'), el('b', '', ({ mail: 'Messaggio', account: 'Estratto conto', withdrawal: 'Prelievo bancario', transfer: 'Trasferimento', contracts: 'Contratto' })[r.type] || 'Operazioni'));
   for (let i = 0; i < 9; i++) { const l = el('i', 'pp-line' + (i === 0 ? ' head' : '')); l.style.width = (100 - (i % 4) * 9) + '%'; paper.append(l); }
   host.append(main, paper);
  }
@@ -204,6 +219,9 @@
  }
  document.addEventListener('estratto:navigate', e => syncGroups(e.detail));
  document.addEventListener('estratto:library', render);
+ function loadFiles() { if (!window.EstrattoArchive) return; window.EstrattoArchive.list().then(list => { files = list; render(); }).catch(() => {}); }
+ document.addEventListener('estratto:archive', loadFiles);
+ loadFiles();
  syncGroups((document.querySelector('.studio-page.active')?.id || 'page-overview').slice(5));
  render();
 })();

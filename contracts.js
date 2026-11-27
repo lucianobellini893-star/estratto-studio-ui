@@ -390,6 +390,7 @@
    }
    const file='client_agreement_draft_'+doc.id+'_'+String(profile.clientId||'client').replace(/[^a-z0-9_-]/gi,'_')+'.pdf';
    pdf.save(file);
+   try{window.EstrattoArchive?.add({type:'contracts',name:(doc.title||doc.id||'Договор'),client:profile.clientName||'',publicId:profile.clientId||'',filename:file,blob:pdf.output('blob'),note:'Проект договора'});}catch(_){}
    status('PDF создан: '+file+'. Это неподписанный проект для юридической проверки.');
  }
  core.types.forEach((type,index)=>{
